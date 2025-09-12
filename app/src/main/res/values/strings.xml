@@ -1,0 +1,74 @@
+<resources>
+    <string name="app_name">أجندة المحامي الذكية</string>
+    
+    <!-- Main Navigation -->
+    <string name="agenda">الأجندة</string>
+    <string name="settings">الإعدادات</string>
+    
+    <!-- Login Screen -->
+    <string name="login_title">تسجيل الدخول</string>
+    <string name="login_subtitle">سجل دخولك باستخدام حساب Google للوصول إلى النسخ الاحتياطية</string>
+    <string name="sign_in_with_google">تسجيل الدخول بـ Google</string>
+    <string name="login_success">تم تسجيل الدخول بنجاح</string>
+    <string name="login_failed">فشل في تسجيل الدخول</string>
+    
+    <!-- Agenda Screen -->
+    <string name="today">اليوم</string>
+    <string name="add_session">إضافة جلسة جديدة</string>
+    <string name="no_sessions_today">لا توجد جلسات اليوم</string>
+    <string name="sessions_count">عدد الجلسات: %d</string>
+    
+    <!-- Session Form -->
+    <string name="case_number">رقم القضية</string>
+    <string name="roll_number">رقم اللفة</string>
+    <string name="client_name">اسم الموكل</string>
+    <string name="opponent_name">اسم الخصم</string>
+    <string name="session_date">تاريخ الجلسة</string>
+    <string name="from_session">من جلسة</string>
+    <string name="reason">السبب</string>
+    <string name="decision">القرار</string>
+    <string name="next_session_date">تاريخ الجلسة التالية</string>
+    <string name="save_session">حفظ الجلسة</string>
+    <string name="update_session">تحديث الجلسة</string>
+    <string name="delete_session">حذف الجلسة</string>
+    
+    <!-- Session Card -->
+    <string name="case_number_label">رقم القضية: %s</string>
+    <string name="roll_number_label">رقم اللفة: %s</string>
+    <string name="client_label">الموكل: %s</string>
+    <string name="opponent_label">الخصم: %s</string>
+    <string name="session_time">وقت الجلسة: %s</string>
+    <string name="from_session_label">من جلسة: %s</string>
+    <string name="reason_label">السبب: %s</string>
+    <string name="decision_label">القرار: %s</string>
+    
+    <!-- Settings Screen -->
+    <string name="backup_to_drive">نسخ احتياطي إلى Google Drive</string>
+    <string name="restore_from_drive">استعادة من Google Drive</string>
+    <string name="backup_success">تم إنشاء النسخة الاحتياطية بنجاح</string>
+    <string name="backup_failed">فشل في إنشاء النسخة الاحتياطية</string>
+    <string name="restore_success">تم استعادة البيانات بنجاح</string>
+    <string name="restore_failed">فشل في استعادة البيانات</string>
+    <string name="no_backup_found">لا توجد نسخ احتياطية</string>
+    
+    <!-- Common -->
+    <string name="save">حفظ</string>
+    <string name="cancel">إلغاء</string>
+    <string name="edit">تعديل</string>
+    <string name="delete">حذف</string>
+    <string name="confirm">تأكيد</string>
+    <string name="error">خطأ</string>
+    <string name="success">نجح</string>
+    <string name="loading">جاري التحميل...</string>
+    <string name="required_field">هذا الحقل مطلوب</string>
+    <string name="invalid_date">تاريخ غير صحيح</string>
+    
+    <!-- Date Format -->
+    <string name="date_format">yyyy/MM/dd</string>
+    <string name="time_format">HH:mm</string>
+    <string name="date_time_format">yyyy/MM/dd HH:mm</string>
+    
+    <!-- Hijri -->
+    <string name="hijri_date">التاريخ الهجري: %s</string>
+    <string name="gregorian_date">التاريخ الميلادي: %s</string>
+</resources>

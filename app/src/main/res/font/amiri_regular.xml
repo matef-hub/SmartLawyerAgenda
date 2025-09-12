@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<font-family xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Placeholder for Amiri Regular font -->
+    <!-- Download Amiri-Regular.ttf from Google Fonts and place it in assets/fonts/ -->
+    <!-- Then reference it here: android:font="@font/amiri_regular_ttf" -->
+</font-family>

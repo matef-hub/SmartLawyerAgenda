@@ -1,0 +1,39 @@
+# Android Studio / IntelliJ
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+
+# Build folders
+/build
+/captures
+.externalNativeBuild
+.cxx
+
+# Kotlin / Jetpack Compose / KSP
+*.ksp
+*.ksp.cache
+*.ksp.log
+
+# Gradle wrapper
+gradle-wrapper.jar
+
+# Android specific
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+*.so
+*.db
+*.sqlite
+*.log
+
+# Proguard / R8
+*.pro

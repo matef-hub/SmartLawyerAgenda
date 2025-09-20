@@ -1,13 +1,12 @@
 package com.example.smartlawyeragenda.ui.components
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import java.text.SimpleDateFormat
 import java.util.*
 
 data class DateFilter(
@@ -16,15 +15,18 @@ data class DateFilter(
     val endDate: Long
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CustomDateFilterChips(
+fun CustomDateFilterDropdown(
     selectedFilter: DateFilter?,
     onFilterSelected: (DateFilter) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var expanded by remember { mutableStateOf(false) }
+    var selectedLabel by remember { mutableStateOf(selectedFilter?.label ?: "اختر الفترة") }
+
     val today = System.currentTimeMillis()
-    val calendar = Calendar.getInstance()
-    
+
     val dateFilters = remember {
         listOf(
             DateFilter(
@@ -54,22 +56,44 @@ fun CustomDateFilterChips(
             )
         )
     }
-    
-    LazyRow(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp)
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier.width(160.dp)
     ) {
-        items(dateFilters) { filter ->
-            FilterChip(
-                onClick = { onFilterSelected(filter) },
-                label = { Text(filter.label) },
-                selected = selectedFilter == filter
-            )
+        OutlinedTextField(
+            value = selectedLabel,
+            onValueChange = {},
+            shape = RoundedCornerShape(24.dp),
+            readOnly = true,
+            label = { Text("الفترة الزمنية") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+            modifier = Modifier
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
+                .fillMaxWidth()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            dateFilters.forEach { filter ->
+                DropdownMenuItem(
+                    text = { Text(filter.label) },
+                    onClick = {
+                        selectedLabel = filter.label
+                        onFilterSelected(filter)
+                        expanded = false
+                    }
+                )
+            }
         }
     }
 }
 
+// ---------- Helpers لتحديد بداية ونهاية اليوم/الأسبوع/الشهر ----------
 private fun getStartOfDay(timeMillis: Long): Long {
     val calendar = Calendar.getInstance()
     calendar.timeInMillis = timeMillis

@@ -6,24 +6,53 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "cases",
-    indices = [Index(value = ["caseNumber"], unique = true)]
+    indices = [
+        Index(value = ["caseNumber"], unique = true),
+        Index(value = ["clientName"]),
+        Index(value = ["createdAt"])
+    ]
 )
 data class CaseEntity(
     @PrimaryKey(autoGenerate = true)
     val caseId: Long = 0,
 
-    // رقم القضية الأساسي
+    // Case number (required and unique)
     val caseNumber: String,
 
-    // رقم الرول (اختياري)
+    // Roll number (optional)
     val rollNumber: String? = null,
 
-    // اسم الموكل
+    // Client name (required)
     val clientName: String,
 
-    // اسم الخصم (اختياري)
+    // Opponent name (optional)
     val opponentName: String? = null,
 
-    // وقت إنشاء القضية
-    val createdAt: Long = System.currentTimeMillis()
-)
+    // Case creation timestamp
+    val createdAt: Long = System.currentTimeMillis(),
+
+    // Additional case details (optional)
+    val caseType: String? = null,
+    val caseDescription: String? = null,
+    val isActive: Boolean = true
+) {
+    // Validation methods
+    fun isValid(): Boolean {
+        return caseNumber.isNotBlank() && clientName.isNotBlank()
+    }
+
+    // Display name for UI
+    fun getDisplayName(): String {
+        return "$caseNumber - $clientName"
+    }
+
+    // Get opponent display name
+    fun getOpponentDisplay(): String {
+        return opponentName?.takeIf { it.isNotBlank() } ?: "غير محدد"
+    }
+
+    // Get roll number display
+    fun getRollDisplay(): String {
+        return rollNumber?.takeIf { it.isNotBlank() } ?: "غير محدد"
+    }
+}

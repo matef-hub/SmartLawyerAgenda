@@ -17,7 +17,7 @@ data class DateFilter(
 )
 
 @Composable
-fun DateFilterChips(
+fun CustomDateFilterChips(
     selectedFilter: DateFilter?,
     onFilterSelected: (DateFilter) -> Unit,
     modifier: Modifier = Modifier

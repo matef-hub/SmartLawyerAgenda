@@ -7,43 +7,63 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface CaseDao {
 
-    // كل القضايا بالترتيب الأحدث أولًا
+    // Get all cases ordered by newest first
     @Query("SELECT * FROM cases ORDER BY createdAt DESC")
     fun getAllCases(): Flow<List<CaseEntity>>
 
-    // جلب قضية بالـ ID
+    // Get case by ID
     @Query("SELECT * FROM cases WHERE caseId = :caseId")
     suspend fun getCaseById(caseId: Long): CaseEntity?
 
-    // جلب قضية برقم القضية
+    // Get case by case number
     @Query("SELECT * FROM cases WHERE caseNumber = :caseNumber")
     suspend fun getCaseByNumber(caseNumber: String): CaseEntity?
 
-    // بحث بالاسم أو الخصم
-    @Query("SELECT * FROM cases WHERE clientName LIKE '%' || :query || '%' OR opponentName LIKE '%' || :query || '%' ORDER BY createdAt DESC")
+    // Search cases by client name, opponent name, case number, or roll number
+    @Query("""
+        SELECT * FROM cases 
+        WHERE clientName LIKE '%' || :query || '%' 
+           OR COALESCE(opponentName, '') LIKE '%' || :query || '%'
+           OR caseNumber LIKE '%' || :query || '%'
+           OR COALESCE(rollNumber, '') LIKE '%' || :query || '%'
+        ORDER BY createdAt DESC
+    """)
     fun searchCases(query: String): Flow<List<CaseEntity>>
 
-    // إحصائيات
+    // Get cases count
     @Query("SELECT COUNT(*) FROM cases")
     suspend fun getCasesCount(): Int
 
-    // إضافة أو تحديث قضية
+    // Get cases with upcoming sessions
+    @Query("""
+        SELECT DISTINCT c.* FROM cases c
+        INNER JOIN sessions s ON c.caseId = s.caseId
+        WHERE s.sessionDate >= :fromDate
+        ORDER BY c.createdAt DESC
+    """)
+    fun getCasesWithUpcomingSessions(fromDate: Long): Flow<List<CaseEntity>>
+
+    // Insert or replace case
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCase(case: CaseEntity): Long
 
-    // تحديث
+    // Update case
     @Update
     suspend fun updateCase(case: CaseEntity)
 
-    // حذف (object)
+    // Delete case by object
     @Delete
     suspend fun deleteCase(case: CaseEntity)
 
-    // حذف بالـ ID
+    // Delete case by ID
     @Query("DELETE FROM cases WHERE caseId = :caseId")
     suspend fun deleteCaseById(caseId: Long)
 
+    // Delete all cases
     @Query("DELETE FROM cases")
     suspend fun deleteAllCases()
 
+    // Check if case number already exists (for validation)
+    @Query("SELECT COUNT(*) FROM cases WHERE caseNumber = :caseNumber AND caseId != :excludeCaseId")
+    suspend fun isCaseNumberExists(caseNumber: String, excludeCaseId: Long = 0): Int
 }

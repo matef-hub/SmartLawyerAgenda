@@ -3,8 +3,8 @@ package com.example.smartlawyeragenda.utils
 import android.content.Context
 import com.example.smartlawyeragenda.data.entities.CaseEntity
 import com.example.smartlawyeragenda.data.entities.SessionEntity
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
+import com.google.api.client.http.javanet.NetHttpTransport
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
 import com.google.api.client.http.FileContent
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.drive.Drive
@@ -17,18 +17,23 @@ import kotlinx.coroutines.withContext
 import java.io.File as JavaFile
 import java.io.FileWriter
 import java.io.IOException
-import java.util.*
 
 class BackupManager(private val context: Context) {
     
     private val gson = Gson()
-
-    private val driveService: Drive by lazy {
-        val credential = GoogleCredential.getApplicationDefault()
-            .createScoped(listOf(DriveScopes.DRIVE_FILE))
+    
+    // Drive service - will be initialized when user provides account
+    private var driveService: Drive? = null
+    
+    private fun initializeDriveService(accountName: String): Drive {
+        val credential = GoogleAccountCredential.usingOAuth2(
+            context, 
+            listOf(DriveScopes.DRIVE_FILE)
+        )
+        credential.selectedAccountName = accountName
         
-        Drive.Builder(
-            GoogleNetHttpTransport.newTrustedTransport(),
+        return Drive.Builder(
+            NetHttpTransport(),
             GsonFactory.getDefaultInstance(),
             credential
         )
@@ -43,6 +48,26 @@ class BackupManager(private val context: Context) {
         val backupDate: Long = System.currentTimeMillis()
     )
     
+    // Check if user is signed in
+    fun isSignedIn(): Boolean {
+        return driveService != null
+    }
+    
+    // Initialize with account name (to be called from UI after user selects account)
+    fun initializeWithAccount(accountName: String): Boolean {
+        return try {
+            driveService = initializeDriveService(accountName)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+    
+    // Sign out
+    suspend fun signOut() = withContext(Dispatchers.Main) {
+        driveService = null
+    }
+    
     suspend fun exportToJson(cases: List<CaseEntity>, sessions: List<SessionEntity>): String = withContext(Dispatchers.IO) {
         val backupData = BackupData(cases, sessions)
         gson.toJson(backupData)
@@ -55,6 +80,11 @@ class BackupManager(private val context: Context) {
     
     suspend fun backupToDrive(cases: List<CaseEntity>, sessions: List<SessionEntity>): Result<String> = withContext(Dispatchers.IO) {
         try {
+            // Check if drive service is initialized
+            if (driveService == null) {
+                return@withContext Result.failure(Exception("يجب تسجيل الدخول أولاً"))
+            }
+            
             val jsonData = exportToJson(cases, sessions)
             val tempFile = createTempFile(jsonData)
             
@@ -68,7 +98,7 @@ class BackupManager(private val context: Context) {
             }
             
             val mediaContent = FileContent("application/json", tempFile)
-            val uploadedFile = driveService.files().create(fileMetadata, mediaContent)
+            val uploadedFile = driveService!!.files().create(fileMetadata, mediaContent)
                 .setFields("id")
                 .execute()
             
@@ -82,10 +112,15 @@ class BackupManager(private val context: Context) {
     
     suspend fun restoreFromDrive(): Result<BackupData> = withContext(Dispatchers.IO) {
         try {
+            // Check if drive service is initialized
+            if (driveService == null) {
+                return@withContext Result.failure(Exception("يجب تسجيل الدخول أولاً"))
+            }
+            
             val folderId = getOrCreateBackupFolder()
             
             // Get latest backup file
-            val files = driveService.files().list()
+            val files = driveService!!.files().list()
                 .setQ("'$folderId' in parents and name contains 'SmartLawyerAgenda_Backup_'")
                 .setOrderBy("createdTime desc")
                 .execute()
@@ -95,7 +130,7 @@ class BackupManager(private val context: Context) {
             }
             
             val latestFile = files.files[0]
-            val content = driveService.files().get(latestFile.id).executeMediaAsInputStream()
+            val content = driveService!!.files().get(latestFile.id).executeMediaAsInputStream()
             
             val json = content.bufferedReader().use { it.readText() }
             val backupData = importFromJson(json)
@@ -109,7 +144,7 @@ class BackupManager(private val context: Context) {
     private suspend fun getOrCreateBackupFolder(): String = withContext(Dispatchers.IO) {
         try {
             // Try to find existing folder
-            val files = driveService.files().list()
+            val files = driveService!!.files().list()
                 .setQ("name='SmartLawyerAgenda Backups' and mimeType='application/vnd.google-apps.folder'")
                 .execute()
             
@@ -123,7 +158,7 @@ class BackupManager(private val context: Context) {
                 mimeType = "application/vnd.google-apps.folder"
             }
             
-            val folder = driveService.files().create(folderMetadata)
+            val folder = driveService!!.files().create(folderMetadata)
                 .setFields("id")
                 .execute()
             

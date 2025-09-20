@@ -31,8 +31,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     buildFeatures {
@@ -57,10 +57,10 @@ android {
 }
 
 kotlin {
-    jvmToolchain(17) // ensures Kotlin compiles with JDK 17
+    jvmToolchain(21) // ensures Kotlin compiles with JDK 21
 
     compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
         freeCompilerArgs.add("-Xjvm-default=all")
     }
 }
@@ -91,12 +91,17 @@ dependencies {
     // Room Database
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.room.paging)
+    implementation(libs.ui)
+    implementation(libs.androidx.espresso.core)
     ksp(libs.androidx.room.compiler)
     
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
     
-    // Google Sign-In
+    // Google Sign-In - Updated to use Credential Manager API
+    implementation(libs.credential.manager)
+    implementation(libs.credential.manager.play.services.auth)
     implementation(libs.play.services.auth)
     implementation(libs.google.auth.library.oauth2.http)
 
@@ -110,7 +115,8 @@ dependencies {
     
     // Date/Time
     implementation(libs.kotlinx.datetime)
-    
+    implementation(libs.androidx.foundation)
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

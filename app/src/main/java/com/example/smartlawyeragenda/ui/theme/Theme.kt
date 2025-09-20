@@ -17,29 +17,37 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = LawyerBlueLight,
-    secondary = LawyerGoldLight,
-    tertiary = Pink80,
-    background = Color(0xFF0F172A),
-    surface = Color(0xFF1E293B),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFFF1F5F9),
-    onSurface = Color(0xFFF1F5F9)
+    primary = AppColors.DarkPrimary,
+    secondary = AppColors.DarkSecondary,
+    tertiary = AppColors.DarkTertiary,
+    background = AppColors.DarkBackground,
+    surface = AppColors.DarkSurface,
+    surfaceVariant = AppColors.DarkSurfaceVariant,
+    onPrimary = AppColors.OnPrimary,
+    onSecondary = AppColors.OnSecondary,
+    onTertiary = AppColors.OnTertiary,
+    onBackground = AppColors.DarkOnBackground,
+    onSurface = AppColors.DarkOnSurface,
+    onSurfaceVariant = AppColors.DarkOnSurfaceVariant,
+    error = AppColors.Error,
+    onError = AppColors.OnPrimary
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = LawyerBlue,
-    secondary = LawyerGold,
-    tertiary = Pink40,
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F)
+    primary = AppColors.Primary,
+    secondary = AppColors.Secondary,
+    tertiary = AppColors.Tertiary,
+    background = AppColors.Background,
+    surface = AppColors.Surface,
+    surfaceVariant = AppColors.SurfaceVariant,
+    onPrimary = AppColors.OnPrimary,
+    onSecondary = AppColors.OnSecondary,
+    onTertiary = AppColors.OnTertiary,
+    onBackground = AppColors.OnBackground,
+    onSurface = AppColors.OnSurface,
+    onSurfaceVariant = AppColors.OnSurfaceVariant,
+    error = AppColors.Error,
+    onError = AppColors.OnPrimary
 )
 
 @Composable
@@ -63,14 +71,27 @@ fun SmartLawyerAgendaTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+            // Use the modern approach for status bar color
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
+        content = content
+    )
+}
+
+@Composable
+fun SmartLawyerAgendaThemeWithManager(
+    themeState: ThemeState,
+    content: @Composable () -> Unit
+) {
+    val isDarkMode = themeState.getCurrentTheme()
+    
+    SmartLawyerAgendaTheme(
+        darkTheme = isDarkMode,
         content = content
     )
 }

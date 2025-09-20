@@ -4,7 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.smartlawyeragenda.data.entities.CaseEntity
 import com.example.smartlawyeragenda.data.entities.SessionEntity
+import com.example.smartlawyeragenda.data.entities.SessionStatus
 import com.example.smartlawyeragenda.repository.MainRepository
+import com.example.smartlawyeragenda.repository.OverallStatistics
+import com.example.smartlawyeragenda.repository.DatabaseExport
 import com.example.smartlawyeragenda.utils.BackupManager
 import com.example.smartlawyeragenda.utils.HijriUtils
 import kotlinx.coroutines.flow.*
@@ -15,7 +18,13 @@ import java.util.*
 data class SessionWithCase(
     val session: SessionEntity,
     val case: CaseEntity
-)
+) {
+    // Helper methods for UI display
+    fun getDisplayTitle(): String = "${case.caseNumber} - ${case.clientName}"
+    fun getFormattedDate(): String = session.getFormattedDate()
+    fun getStatusDisplay(): String = session.getStatusDisplay()
+    fun getTimeDisplay(): String = session.sessionTime ?: "غير محدد"
+}
 
 data class AgendaUiState(
     val sessions: List<SessionWithCase> = emptyList(),
@@ -25,11 +34,14 @@ data class AgendaUiState(
     val gregorianDate: String = "",
     val hijriDate: String = "",
     val isLoggedIn: Boolean = false,
-    val backupStatus: String? = null
+    val backupStatus: String? = null,
+    val searchQuery: String = "",
+    val isSearchMode: Boolean = false,
+    val statistics: OverallStatistics? = null
 )
 
 class AgendaViewModel(
-    val repository: MainRepository,
+    private val repository: MainRepository,
     private val backupManager: BackupManager
 ) : ViewModel() {
 
@@ -41,15 +53,24 @@ class AgendaViewModel(
     init {
         updateDateInfo()
         loadSessionsForDate(_uiState.value.selectedDate)
+        loadStatistics()
     }
 
     // ---------------------------
-    // 🗓 التحكم في التاريخ
+    // 🗓 Date Management
     // ---------------------------
     fun selectDate(dateMillis: Long) {
-        _uiState.value = _uiState.value.copy(selectedDate = dateMillis)
+        _uiState.value = _uiState.value.copy(
+            selectedDate = dateMillis,
+            isSearchMode = false,
+            searchQuery = ""
+        )
         updateDateInfo()
         loadSessionsForDate(dateMillis)
+    }
+
+    fun goToToday() {
+        selectDate(System.currentTimeMillis())
     }
 
     private fun updateDateInfo() {
@@ -64,52 +85,156 @@ class AgendaViewModel(
     }
 
     // ---------------------------
-    // 📂 تحميل الجلسات
+    // 📂 Session Loading
     // ---------------------------
     private fun loadSessionsForDate(dateMillis: Long) {
-        val startOfDay = getStartOfDay(dateMillis)
-        val endOfDay = getEndOfDay(dateMillis)
-
-        repository.getSessionsByDate(startOfDay, endOfDay)
-            .combine(repository.getAllCases()) { sessions, cases ->
-                sessions.mapNotNull { session ->
-                    val case = cases.find { it.caseId == session.caseId }
-                    case?.let { SessionWithCase(session, it) }
-                }
-            }
-            .onStart {
+        viewModelScope.launch {
+            try {
                 _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            }
-            .onEach { sessionsWithCases ->
-                _uiState.value = _uiState.value.copy(
-                    sessions = sessionsWithCases,
-                    isLoading = false
-                )
-            }
-            .catch { e ->
+
+                // Use the new repository method for getting sessions for a specific date
+                repository.getSessionsForDate(dateMillis)
+                    .combine(repository.getAllCases()) { sessions, cases ->
+                        sessions.mapNotNull { session ->
+                            val case = cases.find { it.caseId == session.caseId }
+                            case?.let { SessionWithCase(session, it) }
+                        }.sortedBy { it.session.sessionTime ?: "00:00" }
+                    }
+                    .collect { sessionsWithCases ->
+                        _uiState.value = _uiState.value.copy(
+                            sessions = sessionsWithCases,
+                            isLoading = false
+                        )
+                    }
+            } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = e.message ?: "حدث خطأ غير متوقع"
                 )
             }
-            .launchIn(viewModelScope)
+        }
     }
 
     // ---------------------------
-    // 💾 عمليات الحفظ والحذف
+    // 🔍 Search Functionality
+    // ---------------------------
+    fun searchSessions(query: String) {
+        viewModelScope.launch {
+            try {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = true,
+                    searchQuery = query,
+                    isSearchMode = query.isNotBlank()
+                )
+
+                if (query.isBlank()) {
+                    // Return to date view
+                    loadSessionsForDate(_uiState.value.selectedDate)
+                    return@launch
+                }
+
+                // Search both cases and sessions
+                val searchedCases = repository.searchCases(query).first()
+                val searchedSessions = repository.searchSessions(query).first()
+                val allCases = repository.getAllCases().first()
+
+                val sessionsWithCases = mutableListOf<SessionWithCase>()
+
+                // Add sessions from case search
+                searchedCases.forEach { case ->
+                    repository.getSessionsByCaseId(case.caseId).first().forEach { session ->
+                        sessionsWithCases.add(SessionWithCase(session, case))
+                    }
+                }
+
+                // Add sessions from session search
+                searchedSessions.forEach { session ->
+                    val case = allCases.find { it.caseId == session.caseId }
+                    case?.let {
+                        val sessionWithCase = SessionWithCase(session, it)
+                        if (!sessionsWithCases.any { it.session.sessionId == session.sessionId }) {
+                            sessionsWithCases.add(sessionWithCase)
+                        }
+                    }
+                }
+
+                _uiState.value = _uiState.value.copy(
+                    sessions = sessionsWithCases.sortedByDescending { it.session.sessionDate },
+                    isLoading = false
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "فشل في البحث"
+                )
+            }
+        }
+    }
+
+    fun clearSearch() {
+        _uiState.value = _uiState.value.copy(
+            searchQuery = "",
+            isSearchMode = false
+        )
+        loadSessionsForDate(_uiState.value.selectedDate)
+    }
+
+    // ---------------------------
+    // 💾 CRUD Operations
     // ---------------------------
     fun saveSession(
         case: CaseEntity,
         session: SessionEntity,
-        nextSessionDate: Long?
+        createNextSession: Boolean = false,
+        nextSessionDate: Long? = null
     ) {
         viewModelScope.launch {
             try {
-                repository.saveSessionWithAutoNext(case, session, nextSessionDate)
-                loadSessionsForDate(_uiState.value.selectedDate)
+                _uiState.value = _uiState.value.copy(isLoading = true)
+
+                // Use the new repository method
+                repository.saveCaseWithSession(case, session, createNextSession, nextSessionDate)
+
+                // Refresh current view
+                if (_uiState.value.isSearchMode) {
+                    searchSessions(_uiState.value.searchQuery)
+                } else {
+                    loadSessionsForDate(_uiState.value.selectedDate)
+                }
+
+                loadStatistics()
+                _uiState.value = _uiState.value.copy(isLoading = false)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
+                    isLoading = false,
                     error = e.message ?: "فشل في حفظ الجلسة"
+                )
+            }
+        }
+    }
+
+    fun updateSessionStatus(sessionId: Long, newStatus: SessionStatus, notes: String? = null) {
+        viewModelScope.launch {
+            try {
+                val session = repository.getSessionById(sessionId)
+                if (session != null) {
+                    val updatedSession = session.copy(
+                        status = newStatus,
+                        notes = notes
+                    )
+                    repository.updateSession(updatedSession)
+
+                    // Refresh current view
+                    if (_uiState.value.isSearchMode) {
+                        searchSessions(_uiState.value.searchQuery)
+                    } else {
+                        loadSessionsForDate(_uiState.value.selectedDate)
+                    }
+                    loadStatistics()
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "فشل في تحديث حالة الجلسة"
                 )
             }
         }
@@ -119,7 +244,14 @@ class AgendaViewModel(
         viewModelScope.launch {
             try {
                 repository.deleteSession(session)
-                loadSessionsForDate(_uiState.value.selectedDate)
+
+                // Refresh current view
+                if (_uiState.value.isSearchMode) {
+                    searchSessions(_uiState.value.searchQuery)
+                } else {
+                    loadSessionsForDate(_uiState.value.selectedDate)
+                }
+                loadStatistics()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     error = e.message ?: "فشل في حذف الجلسة"
@@ -127,7 +259,7 @@ class AgendaViewModel(
             }
         }
     }
-    
+
     suspend fun getCaseById(caseId: Long): CaseEntity? {
         return try {
             repository.getCaseById(caseId)
@@ -138,12 +270,30 @@ class AgendaViewModel(
             null
         }
     }
-    
+
+    suspend fun getSessionById(sessionId: Long): SessionEntity? {
+        return try {
+            repository.getSessionById(sessionId)
+        } catch (e: Exception) {
+            _uiState.value = _uiState.value.copy(
+                error = e.message ?: "فشل في جلب بيانات الجلسة"
+            )
+            null
+        }
+    }
+
     fun deleteCaseWithSessions(caseId: Long) {
         viewModelScope.launch {
             try {
                 repository.deleteCaseWithSessions(caseId)
-                loadSessionsForDate(_uiState.value.selectedDate)
+
+                // Refresh current view
+                if (_uiState.value.isSearchMode) {
+                    searchSessions(_uiState.value.searchQuery)
+                } else {
+                    loadSessionsForDate(_uiState.value.selectedDate)
+                }
+                loadStatistics()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     error = e.message ?: "فشل في حذف القضية"
@@ -153,17 +303,47 @@ class AgendaViewModel(
     }
 
     // ---------------------------
-    // ☁️ النسخ الاحتياطي والاسترجاع
+    // 📊 Statistics
+    // ---------------------------
+    private fun loadStatistics() {
+        viewModelScope.launch {
+            try {
+                val stats = repository.getOverallStatistics()
+                _uiState.value = _uiState.value.copy(statistics = stats)
+            } catch (e: Exception) {
+                // Statistics failure shouldn't break the app, just log it
+                _uiState.value = _uiState.value.copy(
+                    statistics = OverallStatistics(0, 0, 0, 0, 0)
+                )
+            }
+        }
+    }
+
+    fun refreshStatistics() {
+        loadStatistics()
+    }
+
+    // ---------------------------
+    // ☁️ Backup and Restore
     // ---------------------------
     fun backupToDrive() {
         viewModelScope.launch {
             try {
                 _uiState.value = _uiState.value.copy(isLoading = true)
 
-                val cases = repository.getAllCases().first()
-                val sessions = repository.getAllSessions().first()
+                // Check if user is signed in
+                if (!backupManager.isSignedIn()) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "يجب تسجيل الدخول أولاً لإنشاء نسخة احتياطية"
+                    )
+                    return@launch
+                }
 
-                val result = backupManager.backupToDrive(cases, sessions)
+                // Use the new export functionality
+                val exportData = repository.exportData()
+                val result = backupManager.backupToDrive(exportData.cases, exportData.sessions)
+
                 result.fold(
                     onSuccess = { message ->
                         _uiState.value = _uiState.value.copy(
@@ -192,23 +372,42 @@ class AgendaViewModel(
             try {
                 _uiState.value = _uiState.value.copy(isLoading = true)
 
+                // Check if user is signed in
+                if (!backupManager.isSignedIn()) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "يجب تسجيل الدخول أولاً لاستعادة النسخة الاحتياطية"
+                    )
+                    return@launch
+                }
+
                 val result = backupManager.restoreFromDrive()
                 result.fold(
                     onSuccess = { backupData ->
-                        // حذف البيانات القديمة
-                        repository.deleteAllSessions()
-                        repository.deleteAllCases()
-
-                        // إدخال البيانات الجديدة
-                        backupData.cases.forEach { repository.insertCase(it) }
-                        backupData.sessions.forEach { repository.insertSession(it) }
-
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            backupStatus = "تم استعادة البيانات بنجاح"
+                        // Use the new import functionality
+                        val exportData = DatabaseExport(
+                            cases = backupData.cases,
+                            sessions = backupData.sessions,
+                            exportDate = System.currentTimeMillis()
                         )
 
-                        loadSessionsForDate(_uiState.value.selectedDate)
+                        val importResult = repository.importData(exportData)
+
+                        if (importResult.success) {
+                            _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                backupStatus = "تم استعادة البيانات بنجاح - ${importResult.importedCases} قضية، ${importResult.importedSessions} جلسة"
+                            )
+
+                            // Refresh all views
+                            loadSessionsForDate(_uiState.value.selectedDate)
+                            loadStatistics()
+                        } else {
+                            _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                error = importResult.error ?: "فشل في استيراد البيانات"
+                            )
+                        }
                     },
                     onFailure = { error ->
                         _uiState.value = _uiState.value.copy(
@@ -226,8 +425,22 @@ class AgendaViewModel(
         }
     }
 
+    fun exportLocalBackup(): DatabaseExport? {
+        return try {
+            viewModelScope.launch {
+                repository.exportData()
+            }
+            null // This should be handled differently, returning from coroutine
+        } catch (e: Exception) {
+            _uiState.value = _uiState.value.copy(
+                error = e.message ?: "فشل في تصدير البيانات"
+            )
+            null
+        }
+    }
+
     // ---------------------------
-    // 🧹 تنظيف الحالة
+    // 🧹 State Management
     // ---------------------------
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
@@ -237,84 +450,110 @@ class AgendaViewModel(
         _uiState.value = _uiState.value.copy(backupStatus = null)
     }
     
-    // -------------------------
-    // Search functionality
-    // -------------------------
-    fun searchSessions(query: String) {
+    // Google Account methods
+    fun isSignedInToGoogle(): Boolean {
+        return backupManager.isSignedIn()
+    }
+    
+    fun signOutFromGoogle() {
         viewModelScope.launch {
             try {
-                _uiState.value = _uiState.value.copy(isLoading = true)
-                
-                val searchResults = repository.searchSessions(query)
-                val cases = repository.getAllCases().first()
-                
-                val sessionsWithCases = searchResults.mapNotNull { session ->
-                    val case = cases.find { it.caseId == session.caseId }
-                    case?.let { SessionWithCase(session, it) }
-                }
-                
+                backupManager.signOut()
                 _uiState.value = _uiState.value.copy(
-                    sessions = sessionsWithCases,
-                    isLoading = false
+                    backupStatus = "تم تسجيل الخروج بنجاح"
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "فشل في البحث"
+                    error = e.message ?: "فشل في تسجيل الخروج"
                 )
             }
         }
     }
-    
-    // -------------------------
-    // Statistics functionality
-    // -------------------------
-    suspend fun getStatistics(): StatisticsData {
-        return try {
-            val todaySessions = repository.getTodaySessionsCount()
-            val totalCases = repository.getTotalCasesCount()
-            val upcomingSessions = repository.getUpcomingSessionsCount()
-            val totalSessions = repository.getTotalSessionsCount()
-            
-            StatisticsData(
-                todaySessions = todaySessions,
-                totalCases = totalCases,
-                upcomingSessions = upcomingSessions,
-                totalSessions = totalSessions
-            )
-        } catch (_: Exception) {
-            StatisticsData(0, 0, 0, 0)
+
+    fun setLoading(isLoading: Boolean) {
+        _uiState.value = _uiState.value.copy(isLoading = isLoading)
+    }
+
+    // ---------------------------
+    // 🎯 Quick Actions
+    // ---------------------------
+    fun getTodaySessions() {
+        selectDate(System.currentTimeMillis())
+    }
+
+    fun getUpcomingSessions() {
+        viewModelScope.launch {
+            try {
+                _uiState.value = _uiState.value.copy(isLoading = true, isSearchMode = true)
+
+                val upcomingSessions = repository.getUpcomingSessions().first()
+                val allCases = repository.getAllCases().first()
+
+                val sessionsWithCases = upcomingSessions.mapNotNull { session ->
+                    val case = allCases.find { it.caseId == session.caseId }
+                    case?.let { SessionWithCase(session, it) }
+                }
+
+                _uiState.value = _uiState.value.copy(
+                    sessions = sessionsWithCases,
+                    isLoading = false,
+                    searchQuery = "الجلسات القادمة"
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "فشل في جلب الجلسات القادمة"
+                )
+            }
+        }
+    }
+
+    fun getSessionsForWeek(weekStart: Long) {
+        viewModelScope.launch {
+            try {
+                _uiState.value = _uiState.value.copy(isLoading = true)
+
+                repository.getSessionsForWeek(weekStart)
+                    .combine(repository.getAllCases()) { sessions, cases ->
+                        sessions.mapNotNull { session ->
+                            val case = cases.find { it.caseId == session.caseId }
+                            case?.let { SessionWithCase(session, it) }
+                        }.sortedBy { it.session.sessionDate }
+                    }
+                    .collect { sessionsWithCases ->
+                        _uiState.value = _uiState.value.copy(
+                            sessions = sessionsWithCases,
+                            isLoading = false,
+                            isSearchMode = true,
+                            searchQuery = "جلسات الأسبوع"
+                        )
+                    }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "فشل في جلب جلسات الأسبوع"
+                )
+            }
         }
     }
 
     // ---------------------------
-    // 🕒 حساب اليوم
+    // 🔧 Validation Helpers
     // ---------------------------
-    private fun getStartOfDay(dateMillis: Long): Long {
-        val calendar = Calendar.getInstance()
-        calendar.timeInMillis = dateMillis
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        return calendar.timeInMillis
+    suspend fun validateSession(session: SessionEntity): String? {
+        return try {
+            if (!session.isValid()) {
+                return "بيانات الجلسة غير صالحة"
+            }
+
+            if (repository.isSessionExists(session.caseId, session.sessionDate, session.sessionId)) {
+                return "توجد جلسة أخرى لنفس القضية في هذا التاريخ"
+            }
+
+            null // Valid
+        } catch (e: Exception) {
+            e.message ?: "خطأ في التحقق من صحة البيانات"
+        }
     }
 
-    private fun getEndOfDay(dateMillis: Long): Long {
-        val calendar = Calendar.getInstance()
-        calendar.timeInMillis = dateMillis
-        calendar.set(Calendar.HOUR_OF_DAY, 23)
-        calendar.set(Calendar.MINUTE, 59)
-        calendar.set(Calendar.SECOND, 59)
-        calendar.set(Calendar.MILLISECOND, 999)
-        return calendar.timeInMillis
-    }
 }
-
-// Data class for statistics
-data class StatisticsData(
-    val todaySessions: Int,
-    val totalCases: Int,
-    val upcomingSessions: Int,
-    val totalSessions: Int
-)

@@ -71,4 +71,23 @@
     <!-- Hijri -->
     <string name="hijri_date">التاريخ الهجري: %s</string>
     <string name="gregorian_date">التاريخ الميلادي: %s</string>
+
+    <!-- Session Status -->
+    <string name="status_scheduled">مجدولة</string>
+    <string name="status_completed">مكتملة</string>
+    <string name="status_postponed">مؤجلة</string>
+    <string name="status_cancelled">ملغاة</string>
+
+    <!-- Labels -->
+    <string name="case_type">نوع القضية</string>
+    <string name="case_description">وصف القضية</string>
+    <string name="session_status">حالة الجلسة</string>
+    <string name="notes">ملاحظات</string>
+    <string name="statistics">الإحصائيات</string>
+    <string name="case_management">إدارة القضايا</string>
+
+    <!-- Messages -->
+    <string name="loading_cases">جاري تحميل القضايا...</string>
+    <string name="no_active_cases">لا توجد قضايا نشطة</string>
+    <string name="search_results">نتائج البحث</string>
 </resources>

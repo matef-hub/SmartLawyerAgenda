@@ -14,6 +14,8 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.smartlawyeragenda.data.AppDatabase
 import com.example.smartlawyeragenda.ui.AppNavHost
 import com.example.smartlawyeragenda.ui.theme.SmartLawyerAgendaTheme
+import com.example.smartlawyeragenda.ui.theme.SmartLawyerAgendaThemeWithManager
+import com.example.smartlawyeragenda.ui.theme.rememberThemeState
 import com.example.smartlawyeragenda.utils.BackupManager
 
 class MainActivity : ComponentActivity() {
@@ -38,9 +40,15 @@ fun SmartLawyerAgendaApp() {
     val context = LocalContext.current
     val database = remember { AppDatabase.getDatabase(context) }
     val backupManager = remember { BackupManager(context) }
+    val themeState = rememberThemeState()
     
-    AppNavHost(
-        database = database,
-        backupManager = backupManager
-    )
+    SmartLawyerAgendaThemeWithManager(
+        themeState = themeState
+    ) {
+        AppNavHost(
+            database = database,
+            backupManager = backupManager,
+            themeState = themeState
+        )
+    }
 }

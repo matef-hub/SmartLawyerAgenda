@@ -398,6 +398,44 @@ class MainRepository(
 
         return getSessionsByDateRange(monthStart, monthEnd)
     }
+
+    // -------------------------
+    // Sample Data Operations
+    // -------------------------
+    suspend fun populateSampleData() {
+        try {
+            // Check if data already exists
+            val existingCasesCount = getTotalCasesCount()
+            if (existingCasesCount > 0) {
+                return // Don't populate if data already exists
+            }
+
+            val (sampleCases, sampleSessions) = com.example.smartlawyeragenda.data.SampleDataGenerator.generateSampleData()
+
+            // Insert sample cases
+            sampleCases.forEach { case ->
+                insertCase(case)
+            }
+
+            // Insert sample sessions
+            sampleSessions.forEach { session ->
+                insertSession(session)
+            }
+        } catch (e: Exception) {
+            throw Exception("Failed to populate sample data: ${e.message}")
+        }
+    }
+
+    suspend fun clearAllData() {
+        try {
+            // Delete all sessions first (due to foreign key constraints)
+            sessionDao.deleteAllSessions()
+            // Then delete all cases
+            caseDao.deleteAllCases()
+        } catch (e: Exception) {
+            throw Exception("Failed to clear data: ${e.message}")
+        }
+    }
 }
 
 // Data classes for statistics and operations

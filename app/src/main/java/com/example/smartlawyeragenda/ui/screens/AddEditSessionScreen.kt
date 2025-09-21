@@ -1,8 +1,9 @@
 package com.example.smartlawyeragenda.ui.screens
 
 import android.annotation.SuppressLint
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.EaseOutCubic
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -15,15 +16,18 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.navigation.NavController
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import androidx.navigation.compose.rememberNavController
+import com.example.smartlawyeragenda.data.entities.CaseEntity
 import com.example.smartlawyeragenda.data.entities.SessionEntity
 import com.example.smartlawyeragenda.data.entities.SessionStatus
 import com.example.smartlawyeragenda.ui.components.*
 import com.example.smartlawyeragenda.ui.theme.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -32,7 +36,7 @@ import java.util.*
 @Composable
 fun AddEditSessionScreen(
     navController: NavController,
-    caseId: Long,
+    cases: List<CaseEntity>, // 🟢 نمرر لستة القضايا من الـ ViewModel
     existingSession: SessionEntity? = null,
     onSave: (SessionEntity) -> Unit
 ) {
@@ -41,7 +45,8 @@ fun AddEditSessionScreen(
         SimpleDateFormat("yyyy/MM/dd", Locale.Builder().setLanguage("ar").setRegion("EG").build())
     }
 
-    // Form state
+    // --- Form state ---
+    var selectedCase by remember { mutableStateOf<CaseEntity?>(null) }
     var sessionDate by remember {
         mutableStateOf(
             existingSession?.let { dateFormatter.format(Date(it.sessionDate)) } ?: ""
@@ -50,35 +55,30 @@ fun AddEditSessionScreen(
     var sessionTime by remember { mutableStateOf(existingSession?.sessionTime ?: "") }
     var sessionNotes by remember { mutableStateOf(existingSession?.notes ?: "") }
 
+    // Pickers
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
-    
-    // Animation state
-    var startAnimation by remember { mutableStateOf(false) }
+    var expandedCaseMenu by remember { mutableStateOf(false) }
+
+    // Error
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    // --- Animations ---
     val alphaAnimation = remember { Animatable(0f) }
     val slideAnimation = remember { Animatable(50f) }
-    
-    LaunchedEffect(key1 = true) {
-        startAnimation = true
-        
+
+    LaunchedEffect(Unit) {
         launch {
             alphaAnimation.animateTo(
                 targetValue = 1f,
-                animationSpec = tween(
-                    durationMillis = 800,
-                    easing = EaseOutCubic
-                )
+                animationSpec = tween(800, easing = EaseOutCubic)
             )
         }
-        
         launch {
             delay(200)
             slideAnimation.animateTo(
                 targetValue = 0f,
-                animationSpec = tween(
-                    durationMillis = 600,
-                    easing = EaseOutCubic
-                )
+                animationSpec = tween(600, easing = EaseOutCubic)
             )
         }
     }
@@ -87,7 +87,7 @@ fun AddEditSessionScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { 
+                    title = {
                         Text(
                             text = if (existingSession == null) "إضافة جلسة" else "تعديل جلسة",
                             style = AppTypography.HeadlineSmall,
@@ -95,7 +95,8 @@ fun AddEditSessionScreen(
                         )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = AppColors.Primary
+                        containerColor = AppColors.Primary,
+                        titleContentColor = AppColors.OnPrimary
                     )
                 )
             },
@@ -105,8 +106,8 @@ fun AddEditSessionScreen(
                         .fillMaxSize()
                         .padding(paddingValues)
                         .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(
+                            Brush.verticalGradient(
+                                listOf(
                                     AppColors.Background,
                                     AppColors.SurfaceVariant.copy(alpha = 0.3f)
                                 )
@@ -121,7 +122,49 @@ fun AddEditSessionScreen(
                             .offset(y = slideAnimation.value.dp),
                         verticalArrangement = Arrangement.spacedBy(AppSpacing.Medium)
                     ) {
-                        // Session Date with enhanced design
+                        // --- Error message ---
+                        errorMessage?.let { error ->
+                            Text(
+                                text = error,
+                                color = MaterialTheme.colorScheme.error,
+                                style = AppTypography.BodyMedium,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+
+                        // --- Select Case ---
+                        ExposedDropdownMenuBox(
+                            expanded = expandedCaseMenu,
+                            onExpandedChange = { expandedCaseMenu = !expandedCaseMenu }
+                        ) {
+                            OutlinedTextField(
+                                value = selectedCase?.let { "${it.caseNumber} - ${it.clientName}" }
+                                    ?: "اختر القضية",
+                                onValueChange = {},
+                                label = { Text("القضية المرتبطة") },
+                                readOnly = true,
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expandedCaseMenu) },
+                                modifier = Modifier
+                                    .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true)
+                                    .fillMaxWidth()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = expandedCaseMenu,
+                                onDismissRequest = { expandedCaseMenu = false }
+                            ) {
+                                cases.forEach { case ->
+                                    DropdownMenuItem(
+                                        text = { Text("${case.caseNumber} - ${case.clientName}") },
+                                        onClick = {
+                                            selectedCase = case
+                                            expandedCaseMenu = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // --- Session Date ---
                         EnhancedTextField(
                             value = sessionDate,
                             onValueChange = { },
@@ -134,7 +177,7 @@ fun AddEditSessionScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        // Session Time with enhanced design
+                        // --- Session Time ---
                         ExposedDropdownMenuBox(
                             expanded = showTimePicker,
                             onExpandedChange = { showTimePicker = !showTimePicker }
@@ -149,13 +192,9 @@ fun AddEditSessionScreen(
                                 onTrailingIconClick = { showTimePicker = !showTimePicker },
                                 enabled = false,
                                 modifier = Modifier
-                                    .menuAnchor(
-                                        type = MenuAnchorType.PrimaryEditable,
-                                        enabled = true
-                                    )
+                                    .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true)
                                     .fillMaxWidth()
                             )
-
                             val options = listOf("صباحاً", "مساءً")
                             ExposedDropdownMenu(
                                 expanded = showTimePicker,
@@ -173,7 +212,7 @@ fun AddEditSessionScreen(
                             }
                         }
 
-                        // Notes with enhanced design
+                        // --- Notes ---
                         EnhancedTextField(
                             value = sessionNotes,
                             onValueChange = { sessionNotes = it },
@@ -184,14 +223,18 @@ fun AddEditSessionScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        Spacer(modifier = Modifier.height(AppSpacing.Large))
+                        Spacer(Modifier.height(AppSpacing.Large))
 
-                        // Enhanced Save Button
+                        // --- Save Button ---
                         EnhancedButton(
                             onClick = {
+                                if (selectedCase == null) {
+                                    errorMessage = "يجب اختيار قضية للجلسة"
+                                    return@EnhancedButton
+                                }
                                 val session = SessionEntity(
                                     sessionId = existingSession?.sessionId ?: 0L,
-                                    caseId = caseId,
+                                    caseId = selectedCase!!.caseId,
                                     sessionDate = dateFormatter.parse(sessionDate)?.time
                                         ?: System.currentTimeMillis(),
                                     sessionTime = sessionTime,
@@ -211,7 +254,7 @@ fun AddEditSessionScreen(
             }
         )
 
-        // DatePickerDialog
+        // --- Date Picker Dialog ---
         if (showDatePicker) {
             DatePickerDialog(
                 onDismissRequest = { showDatePicker = false },
@@ -236,5 +279,21 @@ fun AddEditSessionScreen(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true, locale = "ar")
+@Composable
+fun AddEditSessionScreenPreview() {
+    val sampleCases = listOf(
+        CaseEntity(1, "123", "10", "أحمد", "محمود", "11/12/2025", "وصف تجريبي"),
+        CaseEntity(2, "124", "11", "سارة", "شركة X", "11/12/2025", "وصف آخر")
+    )
+    MaterialTheme {
+        AddEditSessionScreen(
+            navController = rememberNavController(),
+            cases = sampleCases,
+            onSave = {}
+        )
     }
 }

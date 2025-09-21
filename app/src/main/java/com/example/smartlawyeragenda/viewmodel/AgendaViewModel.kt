@@ -150,9 +150,9 @@ class AgendaViewModel(
                 // Add sessions from session search
                 searchedSessions.forEach { session ->
                     val case = allCases.find { it.caseId == session.caseId }
-                    case?.let {
+                    case?.let { it ->
                         val sessionWithCase = SessionWithCase(session, it)
-                        if (!sessionsWithCases.any { it.session.sessionId == session.sessionId }) {
+                        if (!sessionsWithCases.any { it -> it.session.sessionId == session.sessionId }) {
                             sessionsWithCases.add(sessionWithCase)
                         }
                     }
@@ -302,6 +302,124 @@ class AgendaViewModel(
         }
     }
 
+    fun saveCase(case: CaseEntity) {
+        viewModelScope.launch {
+            try {
+                _uiState.value = _uiState.value.copy(isLoading = true)
+
+                // Validate case before saving
+                if (!case.isValid()) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "بيانات القضية غير صالحة"
+                    )
+                    return@launch
+                }
+
+                // Check for duplicate case number
+                if (repository.isCaseNumberExists(case.caseNumber, case.caseId)) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "رقم القضية موجود بالفعل"
+                    )
+                    return@launch
+                }
+
+                // Save the case
+                if (case.caseId == 0L) {
+                    repository.insertCase(case)
+                } else {
+                    repository.updateCase(case)
+                }
+
+                // Refresh current view
+                if (_uiState.value.isSearchMode) {
+                    searchSessions(_uiState.value.searchQuery)
+                } else {
+                    loadSessionsForDate(_uiState.value.selectedDate)
+                }
+                loadStatistics()
+                _uiState.value = _uiState.value.copy(isLoading = false)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "فشل في حفظ القضية"
+                )
+            }
+        }
+    }
+
+    fun updateCase(case: CaseEntity) {
+        viewModelScope.launch {
+            try {
+                _uiState.value = _uiState.value.copy(isLoading = true)
+
+                // Validate case before updating
+                if (!case.isValid()) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "بيانات القضية غير صالحة"
+                    )
+                    return@launch
+                }
+
+                // Check for duplicate case number (excluding current case)
+                if (repository.isCaseNumberExists(case.caseNumber, case.caseId)) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "رقم القضية موجود بالفعل"
+                    )
+                    return@launch
+                }
+
+                // Update the case
+                repository.updateCase(case)
+
+                // Refresh current view
+                if (_uiState.value.isSearchMode) {
+                    searchSessions(_uiState.value.searchQuery)
+                } else {
+                    loadSessionsForDate(_uiState.value.selectedDate)
+                }
+                loadStatistics()
+                _uiState.value = _uiState.value.copy(isLoading = false)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "فشل في تحديث القضية"
+                )
+            }
+        }
+    }
+
+    fun toggleCaseStatus(caseId: Long) {
+        viewModelScope.launch {
+            try {
+                val case = repository.getCaseById(caseId)
+                if (case != null) {
+                    val updatedCase = case.copy(isActive = !case.isActive)
+                    repository.updateCase(updatedCase)
+
+                    // Refresh current view
+                    if (_uiState.value.isSearchMode) {
+                        searchSessions(_uiState.value.searchQuery)
+                    } else {
+                        loadSessionsForDate(_uiState.value.selectedDate)
+                    }
+                    loadStatistics()
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        error = "القضية غير موجودة"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "فشل في تغيير حالة القضية"
+                )
+            }
+        }
+    }
+
     // ---------------------------
     // 📊 Statistics
     // ---------------------------
@@ -310,7 +428,7 @@ class AgendaViewModel(
             try {
                 val stats = repository.getOverallStatistics()
                 _uiState.value = _uiState.value.copy(statistics = stats)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Statistics failure shouldn't break the app, just log it
                 _uiState.value = _uiState.value.copy(
                     statistics = OverallStatistics(0, 0, 0, 0, 0)
@@ -553,6 +671,51 @@ class AgendaViewModel(
             null // Valid
         } catch (e: Exception) {
             e.message ?: "خطأ في التحقق من صحة البيانات"
+        }
+    }
+
+    // ---------------------------
+    // 📊 Sample Data Management
+    // ---------------------------
+    fun populateSampleData() {
+        viewModelScope.launch {
+            try {
+                _uiState.value = _uiState.value.copy(isLoading = true)
+                repository.populateSampleData()
+                
+                // Refresh current view
+                if (_uiState.value.isSearchMode) {
+                    searchSessions(_uiState.value.searchQuery)
+                } else {
+                    loadSessionsForDate(_uiState.value.selectedDate)
+                }
+                loadStatistics()
+                _uiState.value = _uiState.value.copy(isLoading = false)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "فشل في تحميل البيانات التجريبية"
+                )
+            }
+        }
+    }
+
+    fun clearAllData() {
+        viewModelScope.launch {
+            try {
+                _uiState.value = _uiState.value.copy(isLoading = true)
+                repository.clearAllData()
+                
+                // Refresh current view
+                loadSessionsForDate(_uiState.value.selectedDate)
+                loadStatistics()
+                _uiState.value = _uiState.value.copy(isLoading = false)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "فشل في مسح البيانات"
+                )
+            }
         }
     }
 

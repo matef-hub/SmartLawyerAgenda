@@ -54,7 +54,7 @@ fun AppNavHost(
         composable(NavigationConstants.LOGIN_ROUTE) {
             var isLoading by remember { mutableStateOf(false) }
             var errorMessage by remember { mutableStateOf<String?>(null) }
-            
+
             LoginScreen(
                 onSignInClick = {
                     isLoading = true
@@ -75,7 +75,7 @@ fun AppNavHost(
             var showDeleteSessionDialog by remember { mutableStateOf<com.example.smartlawyeragenda.viewmodel.SessionWithCase?>(null) }
             var showErrorDialog by remember { mutableStateOf<String?>(null) }
             var isProcessing by remember { mutableStateOf(false) }
-            
+
             AgendaScreen(
                 uiState = uiState,
                 onAddSessionClick = {
@@ -124,7 +124,7 @@ fun AppNavHost(
                     }
                 }
             )
-            
+
             // Delete Session Confirmation Dialog
             showDeleteSessionDialog?.let { sessionWithCase ->
                 com.example.smartlawyeragenda.ui.components.DeleteSessionDialog(
@@ -137,14 +137,14 @@ fun AppNavHost(
                     isVisible = true
                 )
             }
-            
+
             // Error Dialog
             com.example.smartlawyeragenda.ui.components.GenericErrorDialog(
                 message = showErrorDialog ?: "",
                 onDismiss = { showErrorDialog = null },
                 isVisible = showErrorDialog != null
             )
-            
+
             // Processing Loading State
             if (isProcessing) {
                 com.example.smartlawyeragenda.ui.components.LoadingState(
@@ -167,7 +167,7 @@ fun AppNavHost(
                             caseNumber = "Unknown",
                             clientName = "Unknown"
                         )
-                    
+
                     viewModel.saveSession(
                         case = case,
                         session = session,
@@ -182,7 +182,7 @@ fun AppNavHost(
         // Add Session Screen (with specific caseId)
         composable(NavigationConstants.ADD_SESSION_WITH_CASE_ROUTE) { backStackEntry ->
             val caseId = backStackEntry.arguments?.getString(NavigationConstants.Arguments.CASE_ID)?.toLongOrNull() ?: 0L
-            
+
             AddEditSessionScreen(
                 navController = navController,
                 caseId = caseId,
@@ -194,7 +194,7 @@ fun AppNavHost(
                             caseNumber = "Unknown",
                             clientName = "Unknown"
                         )
-                    
+
                     viewModel.saveSession(
                         case = case,
                         session = session,
@@ -299,7 +299,7 @@ fun AppNavHost(
             var showCsvExportDialog by remember { mutableStateOf(false) }
             var isExporting by remember { mutableStateOf(false) }
             var exportError by remember { mutableStateOf<String?>(null) }
-            
+
             SettingsScreen(
                 isLoggedIn = uiState.isLoggedIn,
                 isLoading = uiState.isLoading || isExporting,
@@ -319,7 +319,7 @@ fun AppNavHost(
                     NavigationHelper.navigateBack(navController)
                 }
             )
-            
+
             // JSON Export Confirmation Dialog
             com.example.smartlawyeragenda.ui.components.ExportConfirmationDialog(
                 format = "JSON",
@@ -327,7 +327,7 @@ fun AppNavHost(
                     showJsonExportDialog = false
                     isExporting = true
                     exportError = null
-                    
+
                     // TODO: Implement actual JSON export
                     kotlinx.coroutines.GlobalScope.launch {
                         try {
@@ -343,7 +343,7 @@ fun AppNavHost(
                 onDismiss = { showJsonExportDialog = false },
                 isVisible = showJsonExportDialog
             )
-            
+
             // CSV Export Confirmation Dialog
             com.example.smartlawyeragenda.ui.components.ExportConfirmationDialog(
                 format = "CSV",
@@ -351,7 +351,7 @@ fun AppNavHost(
                     showCsvExportDialog = false
                     isExporting = true
                     exportError = null
-                    
+
                     // TODO: Implement actual CSV export
                     kotlinx.coroutines.GlobalScope.launch {
                         try {
@@ -367,7 +367,7 @@ fun AppNavHost(
                 onDismiss = { showCsvExportDialog = false },
                 isVisible = showCsvExportDialog
             )
-            
+
             // Export Error Dialog
             com.example.smartlawyeragenda.ui.components.ExportErrorDialog(
                 onRetry = {
@@ -386,7 +386,7 @@ fun AppNavHost(
             var showToggleDialog by remember { mutableStateOf<com.example.smartlawyeragenda.data.entities.CaseEntity?>(null) }
             var isSearching by remember { mutableStateOf(false) }
             var searchError by remember { mutableStateOf<String?>(null) }
-            
+
             // Get case statistics
             val caseStatistics = remember(uiState.sessions) {
                 uiState.sessions.groupBy { it.case.caseId }.mapValues { (_, sessionsWithCase) ->
@@ -402,7 +402,7 @@ fun AppNavHost(
                     )
                 }
             }
-            
+
             // Filter cases based on search query
             val filteredCases = remember(uiState.sessions, searchQuery) {
                 val allCases = uiState.sessions.map { it.case }.distinctBy { it.caseId }
@@ -412,7 +412,7 @@ fun AppNavHost(
                     com.example.smartlawyeragenda.ui.components.CaseSearchHelper.searchCases(allCases, searchQuery)
                 }
             }
-            
+
             CasesScreen(
                 cases = filteredCases,
                 caseStatistics = caseStatistics,
@@ -452,7 +452,7 @@ fun AppNavHost(
                     showToggleDialog = case
                 }
             )
-            
+
             // Delete Case Confirmation Dialog
             showDeleteDialog?.let { case ->
                 com.example.smartlawyeragenda.ui.components.DeleteCaseDialog(
@@ -465,7 +465,7 @@ fun AppNavHost(
                     isVisible = true
                 )
             }
-            
+
             // Toggle Case Status Confirmation Dialog
             showToggleDialog?.let { case ->
                 com.example.smartlawyeragenda.ui.components.ToggleCaseStatusDialog(
@@ -479,7 +479,7 @@ fun AppNavHost(
                     isVisible = true
                 )
             }
-            
+
             // Search Error Dialog
             com.example.smartlawyeragenda.ui.components.GenericErrorDialog(
                 message = searchError ?: "",

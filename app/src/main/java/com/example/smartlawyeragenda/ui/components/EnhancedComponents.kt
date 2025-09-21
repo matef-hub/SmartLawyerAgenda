@@ -625,26 +625,13 @@ fun DateFilterChips(
     modifier: Modifier = Modifier
 ) {
     val today = System.currentTimeMillis()
-    val calendar = Calendar.getInstance()
-    
+
     val filters = listOf(
-        DateFilter(
-            label = "اليوم",
-            startDate = getStartOfDay(today),
-            endDate = getEndOfDay(today)
-        ),
-        DateFilter(
-            label = "هذا الأسبوع",
-            startDate = getStartOfWeek(today),
-            endDate = getEndOfWeek(today)
-        ),
-        DateFilter(
-            label = "هذا الشهر",
-            startDate = getStartOfMonth(today),
-            endDate = getEndOfMonth(today)
-        )
+        DateFilter.Today(today),
+        DateFilter.ThisWeek(today),
+        DateFilter.ThisMonth(today)
     )
-    
+
     LazyRow(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(AppSpacing.Small),
@@ -653,7 +640,7 @@ fun DateFilterChips(
         items(filters) { filter ->
             FilterChip(
                 text = filter.label,
-                selected = selectedFilter == filter,
+                selected = selectedFilter?.label == filter.label,
                 onClick = { onFilterSelected(filter) }
             )
         }

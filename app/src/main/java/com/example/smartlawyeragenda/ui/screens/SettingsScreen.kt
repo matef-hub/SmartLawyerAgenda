@@ -38,6 +38,8 @@ fun SettingsScreen(
     onRestoreClick: () -> Unit,
     onExportJsonClick: () -> Unit,
     onExportCsvClick: () -> Unit,
+    onPopulateSampleDataClick: () -> Unit,
+    onClearAllDataClick: () -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -291,6 +293,63 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("تصدير CSV")
                         }
+                    }
+                }
+
+                // Sample Data Section
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AccountCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(AppSpacing.Small))
+                            Text(
+                                text = "البيانات التجريبية",
+                                style = AppTypography.TitleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.Primary
+                            )
+                        }
+
+                        Text(
+                            text = "يمكنك تحميل بيانات تجريبية للاختبار أو مسح جميع البيانات",
+                            style = AppTypography.BodyMedium,
+                            color = AppColors.OnSurfaceVariant
+                        )
+
+                        Spacer(modifier = Modifier.height(AppSpacing.Small))
+
+                        // Populate Sample Data Button
+                        EnhancedButton(
+                            onClick = onPopulateSampleDataClick,
+                            modifier = Modifier.fillMaxWidth(),
+                            text = "تحميل البيانات التجريبية",
+                            icon = Icons.Default.FileDownload,
+                            enabled = !isLoading,
+                            isLoading = isLoading,
+                            variant = ButtonVariant.Primary
+                        )
+
+                        // Clear All Data Button
+                        EnhancedButton(
+                            onClick = onClearAllDataClick,
+                            modifier = Modifier.fillMaxWidth(),
+                            text = "مسح جميع البيانات",
+                            icon = Icons.Default.Share,
+                            enabled = !isLoading,
+                            variant = ButtonVariant.Outlined
+                        )
                     }
                 }
 

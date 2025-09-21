@@ -2,11 +2,8 @@ package com.example.smartlawyeragenda
 
 import com.example.smartlawyeragenda.data.entities.CaseEntity
 import com.example.smartlawyeragenda.data.entities.SessionEntity
-import com.example.smartlawyeragenda.repository.MainRepository
-import com.example.smartlawyeragenda.repository.CaseStatistics
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
-import org.junit.Assert.*
 
 /**
  * Test class to verify all repository functions are working correctly

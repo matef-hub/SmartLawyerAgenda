@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.smartlawyeragenda.R
@@ -272,7 +273,7 @@ private fun LoadingSection(
 
         // Status indicator
         Text(
-            text = "Initializing Smart Legal System",
+            text = "Coded By Mohamed Atef",
             fontSize = 12.sp,
             fontWeight = FontWeight.Light,
             color = Color(0xFF8A9BAE),

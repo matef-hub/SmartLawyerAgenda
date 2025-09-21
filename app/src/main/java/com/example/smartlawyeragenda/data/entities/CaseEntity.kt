@@ -29,7 +29,7 @@ data class CaseEntity(
     val opponentName: String? = null,
 
     // Case creation timestamp
-    val createdAt: Long = System.currentTimeMillis(),
+    val createdAt: String = System.currentTimeMillis(),
 
     // Additional case details (optional)
     val caseType: String? = null,

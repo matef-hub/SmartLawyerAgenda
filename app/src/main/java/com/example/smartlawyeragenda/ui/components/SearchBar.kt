@@ -8,7 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,6 +23,7 @@ fun CustomSearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     onSearch: (String) -> Unit,
+    onClear: () -> Unit,
     placeholder: String = "ابحث هنا..."
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -73,7 +74,7 @@ fun CustomSearchBar(
             )
 
             if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
+                IconButton(onClick = { onClear() }) {
                     Icon(
                         imageVector = Icons.Default.Clear,
                         contentDescription = "مسح",

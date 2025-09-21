@@ -9,11 +9,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import java.util.*
 
-data class DateFilter(
-    val label: String,
-    val startDate: Long,
-    val endDate: Long
-)
+sealed class DateFilter(val label: String, val startDate: Long, val endDate: Long) {
+    class Today(today: Long = System.currentTimeMillis()) :
+        DateFilter("اليوم", getStartOfDay(today), getEndOfDay(today))
+
+    class Tomorrow(today: Long = System.currentTimeMillis()) :
+        DateFilter("غداً", getStartOfDay(today + ONE_DAY), getEndOfDay(today + ONE_DAY))
+
+    class ThisWeek(today: Long = System.currentTimeMillis()) :
+        DateFilter("هذا الأسبوع", getStartOfWeek(today), getEndOfWeek(today))
+
+    class NextWeek(today: Long = System.currentTimeMillis()) :
+        DateFilter("الأسبوع القادم", getStartOfWeek(today + 7 * ONE_DAY), getEndOfWeek(today + 7 * ONE_DAY))
+
+    class ThisMonth(today: Long = System.currentTimeMillis()) :
+        DateFilter("هذا الشهر", getStartOfMonth(today), getEndOfMonth(today))
+    object Upcoming : DateFilter(
+        "الجلسات القادمة",
+        System.currentTimeMillis(),
+        Long.MAX_VALUE // ✅ يجيب أي جلسة بعد دلوقتي
+    )
+}
+
+private const val ONE_DAY = 24 * 60 * 60 * 1000L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,42 +43,21 @@ fun CustomDateFilterDropdown(
     var expanded by remember { mutableStateOf(false) }
     var selectedLabel by remember { mutableStateOf(selectedFilter?.label ?: "اختر الفترة") }
 
-    val today = System.currentTimeMillis()
-
+    // جهّز الفلاتر
     val dateFilters = remember {
         listOf(
-            DateFilter(
-                label = "اليوم",
-                startDate = getStartOfDay(today),
-                endDate = getEndOfDay(today)
-            ),
-            DateFilter(
-                label = "غداً",
-                startDate = getStartOfDay(today + 24 * 60 * 60 * 1000),
-                endDate = getEndOfDay(today + 24 * 60 * 60 * 1000)
-            ),
-            DateFilter(
-                label = "هذا الأسبوع",
-                startDate = getStartOfWeek(today),
-                endDate = getEndOfWeek(today)
-            ),
-            DateFilter(
-                label = "الأسبوع القادم",
-                startDate = getStartOfWeek(today + 7 * 24 * 60 * 60 * 1000),
-                endDate = getEndOfWeek(today + 7 * 24 * 60 * 60 * 1000)
-            ),
-            DateFilter(
-                label = "هذا الشهر",
-                startDate = getStartOfMonth(today),
-                endDate = getEndOfMonth(today)
-            )
+            DateFilter.Today(),
+            DateFilter.Tomorrow(),
+            DateFilter.ThisWeek(),
+            DateFilter.NextWeek(),
+            DateFilter.ThisMonth()
         )
     }
 
     ExposedDropdownMenuBox(
         expanded = expanded,
         onExpandedChange = { expanded = !expanded },
-        modifier = modifier.width(160.dp)
+        modifier = modifier.width(180.dp)
     ) {
         OutlinedTextField(
             value = selectedLabel,

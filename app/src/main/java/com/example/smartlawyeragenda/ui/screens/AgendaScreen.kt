@@ -1,17 +1,14 @@
 package com.example.smartlawyeragenda.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -49,6 +46,13 @@ fun AgendaScreen(
     var selectedDateFilter by remember { mutableStateOf<DateFilter?>(null) }
     var showStatistics by remember { mutableStateOf(false) }
 
+    // Sync local search query with UI state
+    LaunchedEffect(uiState.searchQuery) {
+        if (searchQuery != uiState.searchQuery) {
+            searchQuery = uiState.searchQuery
+        }
+    }
+
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Scaffold(
             topBar = {
@@ -77,6 +81,9 @@ fun AgendaScreen(
                         IconButton(onClick = onCasesClick) {
                             Icon(Icons.Default.Folder, contentDescription = "قضايا", tint = Color.White)
                         }
+                        IconButton(onClick = { onDateSelected(System.currentTimeMillis()) }) {
+                            Icon(Icons.Default.CalendarToday, contentDescription = "اليوم", tint = Color.White)
+                        }
                         IconButton(onClick = onSettingsClick) {
                             Icon(Icons.Default.Settings, contentDescription = "إعدادات", tint = Color.White)
                         }
@@ -91,88 +98,77 @@ fun AgendaScreen(
                     )
                 )
             },
-            bottomBar = {
-                Button(
+            floatingActionButton = {
+                FloatingActionButton(
                     onClick = onAddSessionClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .navigationBarsPadding(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF1565C0),
-                        contentColor = Color.White
-                    )
+                    containerColor = Color(0xFF1565C0),
+                    contentColor = Color.White,
+                    modifier = Modifier.padding(bottom = 12.dp) // نزول تحت شوية
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "إضافة جلسة")
-                    Spacer(Modifier.width(8.dp))
-                    Text("إضافة جلسة")
                 }
             }
         ) { paddingValues ->
-            LazyColumn(
+            Column(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .background(Color(0xFFF7F9FC)),
-                contentPadding = PaddingValues(15.dp),
-                verticalArrangement = Arrangement.spacedBy(15.dp)
+                    .background(Color(0xFFF7F9FC))
             ) {
                 // 1️⃣ DateHeader
-                item { DateHeader(uiState) }
+                DateHeader(uiState)
 
-                // 2️⃣ Stats
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // 2️⃣ Statistics
                 uiState.statistics?.let { stats ->
-                    item {
-                        AnimatedVisibility(visible = true) {
-                            StatsDashboard(stats, Modifier.fillMaxWidth())
-                        }
+                    AnimatedVisibility(visible = true) {
+                        StatsDashboard(stats, Modifier.padding(horizontal = 16.dp))
                     }
                 }
 
-                // 3️⃣ Sessions Section
-                when {
-                    uiState.isLoading -> {
-                        item { LoadingState() }
-                    }
-                    uiState.sessions.isEmpty() -> {
-                        item { EmptyState() }
-                    }
-                    else -> {
-                        items(uiState.sessions) { sessionWithCase ->
-                            EnhancedSessionCard(
-                                sessionWithCase = sessionWithCase,
-                                onEdit = { onEditSessionClick(sessionWithCase) },
-                                onDelete = { onDeleteSessionClick(sessionWithCase) },
-                                onUpdateStatus = { newStatus ->
-                                    onUpdateSessionStatus(sessionWithCase.session.sessionId, newStatus)
-                                }
-                            )
-                        }
-                    }
-                }
+                Spacer(modifier = Modifier.height(12.dp))
 
-                // 4️⃣ Date Filter
-                item {
-                    CustomDateFilterDropdown(
-                        selectedFilter = selectedDateFilter,
-                        onFilterSelected = { filter ->
-                            selectedDateFilter = filter
-                            onDateSelected(filter.startDate)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                // 3️⃣ Sessions
+                SessionsSection(
+                    uiState = uiState,
+                    onEditSession = onEditSessionClick,
+                    onDeleteSession = onDeleteSessionClick,
+                    onUpdateSessionStatus = onUpdateSessionStatus
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // 4️⃣ Date Filter Dropdown
+                CustomDateFilterDropdown(
+                    selectedFilter = selectedDateFilter,
+                    onFilterSelected = { filter ->
+                        selectedDateFilter = filter
+                        when (filter) {
+                            is DateFilter.Today -> onSearchQuery("TODAY")
+                            is DateFilter.Tomorrow -> onDateSelected(filter.startDate)
+                            is DateFilter.ThisWeek -> onDateSelected(filter.startDate)
+                            is DateFilter.NextWeek -> onDateSelected(filter.startDate)
+                            is DateFilter.ThisMonth -> onDateSelected(filter.startDate)
+                            is DateFilter.Upcoming -> onSearchQuery("UPCOMING")
+                        }
+                    },
+                    modifier = Modifier
+                        .padding(horizontal = 18.dp, vertical = 8.dp)
+                        .fillMaxWidth()
+                )
 
                 // 5️⃣ Search Bar
-                item {
-                    CustomSearchBar(
-                        query = searchQuery,
-                        onQueryChange = { searchQuery = it },
-                        onSearch = onSearchQuery,
-                        placeholder = "ابحث في الجلسات والقضايا...",
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                CustomSearchBar(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    onSearch = { onSearchQuery(it) },
+                    onClear = { onSearchQuery("") },
+                    placeholder = "ابحث في الجلسات والقضايا...",
+                    modifier = Modifier
+                        .padding(horizontal = 18.dp, vertical = 9.dp)
+                        .fillMaxWidth()
+                )
             }
         }
 
@@ -187,7 +183,38 @@ fun AgendaScreen(
 }
 
 @Composable
+fun SessionsSection(
+    uiState: AgendaUiState,
+    onEditSession: (SessionWithCase) -> Unit,
+    onDeleteSession: (SessionWithCase) -> Unit,
+    onUpdateSessionStatus: (Long, SessionStatus) -> Unit
+) {
+    Crossfade(targetState = uiState.isLoading to uiState.sessions) { (loading, sessions) ->
+        when {
+            loading -> LoadingState()
+            sessions.isEmpty() -> EmptyState(uiState.isSearchMode)
+            else -> LazyColumn(
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(sessions) { sessionWithCase ->
+                    EnhancedSessionCard(
+                        sessionWithCase = sessionWithCase,
+                        onEdit = { onEditSession(sessionWithCase) },
+                        onDelete = { onDeleteSession(sessionWithCase) },
+                        onUpdateStatus = { newStatus ->
+                            onUpdateSessionStatus(sessionWithCase.session.sessionId, newStatus)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun EmptyState(
+    isSearchMode: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -197,6 +224,21 @@ fun EmptyState(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Icon(
+            imageVector = if (isSearchMode) Icons.Default.Search else Icons.Default.CalendarToday,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            modifier = Modifier
+                .size(50.dp)
+                .padding(bottom = 8.dp)
+        )
+        val message = if (isSearchMode) "لا توجد نتائج مطابقة" else "لا توجد جلسات اليوم"
+        Text(
+            text = message,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyLarge
+        )
     }
 }
 
@@ -239,6 +281,7 @@ fun DateHeader(uiState: AgendaUiState) {
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(8.dp),
         modifier = Modifier
+            .padding(horizontal = 16.dp, vertical = 8.dp)
             .fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {

@@ -47,18 +47,75 @@
 
 ```
 app/src/main/java/com/example/smartlawyeragenda/
-├── data/                    # طبقة البيانات
-│   ├── entities/           # كيانات قاعدة البيانات
-│   ├── dao/               # واجهات الوصول للبيانات
-│   └── AppDatabase.kt     # قاعدة البيانات الرئيسية
-├── repository/            # طبقة المستودع
-├── ui/                    # واجهة المستخدم
-│   ├── screens/          # شاشات التطبيق
-│   ├── components/       # مكونات قابلة للإعادة
-│   └── theme/           # الثيم والألوان
-├── viewmodel/           # نماذج العرض
-├── utils/              # الأدوات المساعدة
-└── MainActivity.kt     # النشاط الرئيسي
+│   MainActivity.kt
+│
+├───data
+│   │   AppDatabase.kt
+│   │   DatabaseConverters.kt
+│   │   SampleDataGenerator.kt
+│   │
+│   ├───dao
+│   │       CaseDao.kt
+│   │       SessionDao.kt
+│   │
+│   └───entities
+│           CaseEntity.kt
+│           SessionEntity.kt
+│
+├───repository
+│       MainRepository.kt
+│
+├───ui
+│   │   AppNavHost.kt
+│   │   AppNavHost_COMPLETED_TODOS.md
+│   │
+│   ├───animations
+│   │       AppAnimations.kt
+│   │
+│   ├───components
+│   │       CaseSearchHelper.kt
+│   │       ConfirmationDialog.kt
+│   │       DateFilterChips.kt
+│   │       DatePickerDialog.kt
+│   │       EnhancedComponents.kt
+│   │       ErrorDialog.kt
+│   │       GoogleSignInHelper.kt
+│   │       LoadingStates.kt
+│   │       SearchBar.kt
+│   │       StatisticsCard.kt
+│   │       ThemeToggle.kt
+│   │
+│   ├───navigation
+│   │       NavigationConstants.kt
+│   │       NavigationHelper.kt
+│   │       README.md
+│   │
+│   ├───screens
+│   │       AddCaseScreen.kt
+│   │       AddEditSessionScreen.kt
+│   │       AgendaScreen.kt
+│   │       CasesScreen.kt
+│   │       EditCaseScreen.kt
+│   │       LoginScreen.kt
+│   │       SettingsScreen.kt
+│   │       SplashScreen.kt
+│   │
+│   └───theme
+│           Color.kt
+│           DesignSystem.kt
+│           Theme.kt
+│           ThemeManager.kt
+│           Type.kt
+│
+├───utils
+│       BackupManager.kt
+│       ExportHelper.kt
+│       HijriUtils.kt
+│       NotificationHelper.kt
+│
+└───viewmodel
+        AgendaViewModel.kt
+        AgendaViewModelFactory.kt
 ```
 
 ## الاستخدام

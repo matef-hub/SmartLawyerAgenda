@@ -349,13 +349,37 @@ fun DateHeader(uiState: AgendaUiState) {
 fun StatsDashboard(statistics: OverallStatistics, modifier: Modifier = Modifier) {
     Column(modifier = modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatisticsCard("📂 القضايا", statistics.totalCases.toString(), Color(0xFF42A5F5), Modifier.weight(1f))
-            StatisticsCard("📌 الجلسات", statistics.totalSessions.toString(), Color(0xFF66BB6A), Modifier.weight(1f))
+            StatisticsCard(
+                title = "📂 القضايا",
+                value = statistics.totalCases.toString(),
+                icon = Icons.Default.Folder,
+                color = Color(0xFF42A5F5),
+                modifier = Modifier.weight(1f)
+            )
+            StatisticsCard(
+                title = "📌 الجلسات",
+                value = statistics.totalSessions.toString(),
+                icon = Icons.Default.CalendarToday,
+                color = Color(0xFF66BB6A),
+                modifier = Modifier.weight(1f)
+            )
         }
         Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatisticsCard("⏳ القادمة", statistics.upcomingSessions.toString(), Color(0xFFFFA726), Modifier.weight(1f))
-            StatisticsCard("✅ النشطة", statistics.activeCases.toString(), Color(0xFFAB47BC), Modifier.weight(1f))
+            StatisticsCard(
+                title = "⏳ القادمة",
+                value = statistics.upcomingSessions.toString(),
+                icon = Icons.Default.Schedule,
+                color = Color(0xFFFFA726),
+                modifier = Modifier.weight(1f)
+            )
+            StatisticsCard(
+                title = "✅ النشطة",
+                value = statistics.activeCases.toString(),
+                icon = Icons.Default.Info,
+                color = Color(0xFFAB47BC),
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }

@@ -655,6 +655,35 @@ class AgendaViewModel(
         }
     }
 
+    fun getSessionsForMonth(monthStart: Long) {
+        viewModelScope.launch {
+            try {
+                _uiState.value = _uiState.value.copy(isLoading = true)
+
+                repository.getSessionsForMonth(monthStart)
+                    .combine(repository.getAllCases()) { sessions, cases ->
+                        sessions.mapNotNull { session ->
+                            val case = cases.find { it.caseId == session.caseId }
+                            case?.let { SessionWithCase(session, it) }
+                        }.sortedBy { it.session.sessionDate }
+                    }
+                    .collect { sessionsWithCases ->
+                        _uiState.value = _uiState.value.copy(
+                            sessions = sessionsWithCases,
+                            isLoading = false,
+                            isSearchMode = true,
+                            searchQuery = "جلسات الشهر"
+                        )
+                    }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "فشل في جلب جلسات الشهر"
+                )
+            }
+        }
+    }
+
     // ---------------------------
     // 🔧 Validation Helpers
     // ---------------------------

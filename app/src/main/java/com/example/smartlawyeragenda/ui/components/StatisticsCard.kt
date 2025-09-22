@@ -41,9 +41,9 @@ fun StatisticsCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
-                modifier = Modifier
-                    .size(48.dp)
-                .background(color.copy(alpha = 0.15f), CircleShape),
+            modifier = Modifier
+                .size(48.dp)
+                .background(Color(color.red, color.green, color.blue, 0.15f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

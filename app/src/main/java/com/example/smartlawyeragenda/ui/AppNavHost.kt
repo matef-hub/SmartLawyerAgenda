@@ -160,7 +160,7 @@ fun AppNavHost(
         composable(NavigationConstants.ADD_SESSION_ROUTE) {
             AddEditSessionScreen(
                 navController = navController,
-                cases = uiState.sessions.map { it.case }.distinctBy { it.caseId },
+                cases = if (uiState.cases.isNotEmpty()) uiState.cases else uiState.sessions.map { it.case }.distinctBy { it.caseId },
                 onSave = { session ->
                     // Get the case for this session
                     val case = uiState.sessions.find { it.case.caseId == session.caseId }?.case
@@ -187,7 +187,7 @@ fun AppNavHost(
 
             AddEditSessionScreen(
                 navController = navController,
-                cases = uiState.sessions.map { it.case }.distinctBy { it.caseId },
+                cases = if (uiState.cases.isNotEmpty()) uiState.cases else uiState.sessions.map { it.case }.distinctBy { it.caseId },
                 onSave = { session ->
                     // Get the case for this session
                     val case = uiState.sessions.find { it.case.caseId == session.caseId }?.case
@@ -418,7 +418,7 @@ fun AppNavHost(
             }
 
             CasesScreen(
-                cases = filteredCases,
+                cases = if (uiState.cases.isNotEmpty()) uiState.cases else filteredCases,
                 caseStatistics = caseStatistics,
                 isLoading = uiState.isLoading || isSearching,
                 onBackClick = {

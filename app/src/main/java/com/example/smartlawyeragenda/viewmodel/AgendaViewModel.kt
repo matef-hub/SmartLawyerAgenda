@@ -28,6 +28,7 @@ data class SessionWithCase(
 
 data class AgendaUiState(
     val sessions: List<SessionWithCase> = emptyList(),
+    val cases: List<CaseEntity> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val selectedDate: Long = System.currentTimeMillis(),
@@ -54,6 +55,7 @@ class AgendaViewModel(
         updateDateInfo()
         loadSessionsForDate(_uiState.value.selectedDate)
         loadStatistics()
+        observeCases()
     }
 
     // ---------------------------
@@ -111,6 +113,14 @@ class AgendaViewModel(
                     isLoading = false,
                     error = e.message ?: "حدث خطأ غير متوقع"
                 )
+            }
+        }
+    }
+
+    private fun observeCases() {
+        viewModelScope.launch {
+            repository.getAllCases().collect { cases ->
+                _uiState.value = _uiState.value.copy(cases = cases)
             }
         }
     }

@@ -96,15 +96,6 @@ fun AppNavHost(
                 onCasesClick = {
                     NavigationHelper.navigateToCases(navController)
                 },
-                onDateSelected = { dateMillis ->
-                    isProcessing = true
-                    viewModel.selectDate(dateMillis)
-                    // Simulate processing delay
-                    kotlinx.coroutines.GlobalScope.launch {
-                        kotlinx.coroutines.delay(500)
-                        isProcessing = false
-                    }
-                },
                 onSearchQuery = { query ->
                     isProcessing = true
                     viewModel.searchSessions(query)

@@ -232,11 +232,17 @@ fun AddEditSessionScreen(
                                     errorMessage = "يجب اختيار قضية للجلسة"
                                     return@EnhancedButton
                                 }
+                                val parsedDateMillis = if (sessionDate.isBlank()) {
+                                    System.currentTimeMillis()
+                                } else {
+                                    runCatching { dateFormatter.parse(sessionDate)?.time }
+                                        .getOrNull() ?: System.currentTimeMillis()
+                                }
+
                                 val session = SessionEntity(
                                     sessionId = existingSession?.sessionId ?: 0L,
                                     caseId = selectedCase!!.caseId,
-                                    sessionDate = dateFormatter.parse(sessionDate)?.time
-                                        ?: System.currentTimeMillis(),
+                                    sessionDate = parsedDateMillis,
                                     sessionTime = sessionTime,
                                     notes = sessionNotes,
                                     status = existingSession?.status ?: SessionStatus.SCHEDULED

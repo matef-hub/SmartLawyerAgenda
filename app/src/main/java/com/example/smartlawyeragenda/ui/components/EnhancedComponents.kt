@@ -633,7 +633,8 @@ fun DateFilterChips(
     )
 
     LazyRow(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(AppSpacing.Small),
         contentPadding = PaddingValues(horizontal = AppSpacing.Medium)
     ) {

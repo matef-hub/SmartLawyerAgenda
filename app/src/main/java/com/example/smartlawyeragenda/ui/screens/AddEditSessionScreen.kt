@@ -286,8 +286,8 @@ fun AddEditSessionScreen(
 @Composable
 fun AddEditSessionScreenPreview() {
     val sampleCases = listOf(
-        CaseEntity(1, "123", "10", "أحمد", "محمود", "11/12/2025", "وصف تجريبي"),
-        CaseEntity(2, "124", "11", "سارة", "شركة X", "11/12/2025", "وصف آخر")
+        CaseEntity(1, "123", "10", "أحمد", "محمود", System.currentTimeMillis(), "وصف تجريبي"),
+        CaseEntity(2, "124", "11", "سارة", "شركة X", System.currentTimeMillis(), "وصف آخر")
     )
     MaterialTheme {
         AddEditSessionScreen(

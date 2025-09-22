@@ -8,7 +8,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,9 +44,10 @@ fun AgendaScreen(
     onUpdateSessionStatus: (Long, SessionStatus) -> Unit,
     onSettingsClick: () -> Unit,
     onCasesClick: () -> Unit,
+    modifier: Modifier = Modifier,
     onDateSelected: (Long) -> Unit,
     onSearchQuery: (String) -> Unit,
-    modifier: Modifier = Modifier
+    onDateFilterSelected: (DateFilter) -> Unit = {},
 ) {
     var searchQuery by remember { mutableStateOf(uiState.searchQuery) }
     var selectedDateFilter by remember { mutableStateOf<DateFilter?>(null) }
@@ -81,9 +88,6 @@ fun AgendaScreen(
                         IconButton(onClick = onCasesClick) {
                             Icon(Icons.Default.Folder, contentDescription = "قضايا", tint = Color.White)
                         }
-                        IconButton(onClick = { onDateSelected(System.currentTimeMillis()) }) {
-                            Icon(Icons.Default.CalendarToday, contentDescription = "اليوم", tint = Color.White)
-                        }
                         IconButton(onClick = onSettingsClick) {
                             Icon(Icons.Default.Settings, contentDescription = "إعدادات", tint = Color.White)
                         }
@@ -103,76 +107,83 @@ fun AgendaScreen(
                     onClick = onAddSessionClick,
                     containerColor = Color(0xFF1565C0),
                     contentColor = Color.White,
-                    modifier = Modifier.padding(bottom = 12.dp) // نزول تحت شوية
+                    modifier = Modifier
+                        .navigationBarsPadding()
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "إضافة جلسة")
                 }
             }
         ) { paddingValues ->
-            Column(
+            LazyColumn(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .background(Color(0xFFF7F9FC))
+                    .background(Color(0xFFF7F9FC)),
+                contentPadding = PaddingValues(bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // 1️⃣ DateHeader
-                DateHeader(uiState)
+                item {
+                    DateHeader(uiState)
+                }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // 2️⃣ Statistics
-                uiState.statistics?.let { stats ->
-                    AnimatedVisibility(visible = true) {
-                        StatsDashboard(stats, Modifier.padding(horizontal = 16.dp))
+                if (uiState.statistics != null) {
+                    item {
+                        AnimatedVisibility(visible = true) {
+                            StatsDashboard(uiState.statistics, Modifier.padding(horizontal = 16.dp))
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // 3️⃣ Sessions
-                SessionsSection(
-                    uiState = uiState,
-                    onEditSession = onEditSessionClick,
-                    onDeleteSession = onDeleteSessionClick,
-                    onUpdateSessionStatus = onUpdateSessionStatus
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // 4️⃣ Date Filter Dropdown
-                CustomDateFilterDropdown(
-                    selectedFilter = selectedDateFilter,
-                    onFilterSelected = { filter ->
-                        selectedDateFilter = filter
-                        when (filter) {
-                            is DateFilter.Today -> onSearchQuery("TODAY")
-                            is DateFilter.Tomorrow -> onDateSelected(filter.startDate)
-                            is DateFilter.ThisWeek -> onDateSelected(filter.startDate)
-                            is DateFilter.NextWeek -> onDateSelected(filter.startDate)
-                            is DateFilter.ThisMonth -> onDateSelected(filter.startDate)
-                            is DateFilter.Upcoming -> onSearchQuery("UPCOMING")
+                when {
+                    uiState.isLoading -> {
+                        item { LoadingState() }
+                    }
+                    uiState.sessions.isEmpty() -> {
+                        item { EmptyState(uiState.isSearchMode) }
+                    }
+                    else -> {
+                        items(uiState.sessions) { sessionWithCase ->
+                            EnhancedSessionCard(
+                                sessionWithCase = sessionWithCase,
+                                onEdit = { onEditSessionClick(sessionWithCase) },
+                                onDelete = { onDeleteSessionClick(sessionWithCase) },
+                                onUpdateStatus = { newStatus ->
+                                    onUpdateSessionStatus(sessionWithCase.session.sessionId, newStatus)
+                                }
+                            )
                         }
-                    },
-                    modifier = Modifier
-                        .padding(horizontal = 18.dp, vertical = 8.dp)
-                        .fillMaxWidth()
-                )
+                    }
+                }
 
-                // 5️⃣ Search Bar
-                CustomSearchBar(
-                    query = searchQuery,
-                    onQueryChange = { searchQuery = it },
-                    onSearch = { onSearchQuery(it) },
-                    onClear = { onSearchQuery("") },
-                    placeholder = "ابحث في الجلسات والقضايا...",
-                    modifier = Modifier
-                        .padding(horizontal = 18.dp, vertical = 9.dp)
-                        .fillMaxWidth()
-                )
+                item {
+                    CustomDateFilterDropdown(
+                        selectedFilter = selectedDateFilter,
+                        onFilterSelected = { filter ->
+                            selectedDateFilter = filter
+                            onDateFilterSelected(filter)
+                        },
+                        modifier = Modifier
+                            .padding(horizontal = 18.dp, vertical = 8.dp)
+                            .fillMaxWidth()
+                    )
+                }
+
+                item {
+                    CustomSearchBar(
+                        query = searchQuery,
+                        onQueryChange = { searchQuery = it },
+                        onSearch = onSearchQuery,
+                        onClear = { onSearchQuery("") },
+                        placeholder = "ابحث في الجلسات والقضايا...",
+                        modifier = Modifier
+                            .padding(horizontal = 18.dp, vertical = 9.dp)
+                            .fillMaxWidth()
+                    )
+                }
             }
         }
 
-        // 📊 Statistics Dialog
+        // Statistics Dialog
         if (showStatistics && uiState.statistics != null) {
             StatisticsDialog(
                 statistics = uiState.statistics,
@@ -241,40 +252,6 @@ fun EmptyState(
         )
     }
 }
-
-@Composable
-fun StatsDashboard(statistics: OverallStatistics, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatisticsCard("📂 القضايا", statistics.totalCases.toString(), Color(0xFF42A5F5), Modifier.weight(1f))
-            StatisticsCard("📌 الجلسات", statistics.totalSessions.toString(), Color(0xFF66BB6A), Modifier.weight(1f))
-        }
-        Spacer(Modifier.height(12.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatisticsCard("⏳ القادمة", statistics.upcomingSessions.toString(), Color(0xFFFFA726), Modifier.weight(1f))
-            StatisticsCard("✅ النشطة", statistics.activeCases.toString(), Color(0xFFAB47BC), Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-fun StatisticsCard(title: String, value: String, color: Color, modifier: Modifier = Modifier) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(4.dp),
-        modifier = modifier
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(title, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-            Text(value, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = color))
-        }
-    }
-}
-
 @Composable
 fun DateHeader(uiState: AgendaUiState) {
     Card(
@@ -310,7 +287,7 @@ fun DateHeader(uiState: AgendaUiState) {
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = if (uiState.isSearchMode) "نتائج البحث" else " جدول اليوم",
+                        text = if (uiState.isSearchMode) "نتائج البحث" else "📅 جدول اليوم",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -368,18 +345,20 @@ fun DateHeader(uiState: AgendaUiState) {
         }
     }
 }
-
 @Composable
-fun LoadingState() {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator()
-            Spacer(Modifier.height(12.dp))
-            Text("جاري التحميل...", color = Color.Gray)
+fun StatsDashboard(statistics: OverallStatistics, modifier: Modifier = Modifier) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StatisticsCard("📂 القضايا", statistics.totalCases.toString(), Color(0xFF42A5F5), Modifier.weight(1f))
+            StatisticsCard("📌 الجلسات", statistics.totalSessions.toString(), Color(0xFF66BB6A), Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StatisticsCard("⏳ القادمة", statistics.upcomingSessions.toString(), Color(0xFFFFA726), Modifier.weight(1f))
+            StatisticsCard("✅ النشطة", statistics.activeCases.toString(), Color(0xFFAB47BC), Modifier.weight(1f))
         }
     }
 }
-
 @Preview(showBackground = true, showSystemUi = true, locale = "ar")
 @Composable
 fun AgendaScreenPreview() {

@@ -14,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.smartlawyeragenda.repository.OverallStatistics
@@ -26,8 +25,8 @@ import java.util.*
 fun StatisticsCard(
     title: String,
     value: String,
-    icon: ImageVector,
-    color: Color,
+    icon: Color,
+    color: Modifier,
     modifier: Modifier = Modifier
 ) {
     Card(

@@ -4,8 +4,10 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import java.text.SimpleDateFormat
-import java.util.*
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Entity(
     tableName = "sessions",
@@ -26,105 +28,57 @@ import java.util.*
 data class SessionEntity(
     @PrimaryKey(autoGenerate = true)
     val sessionId: Long = 0,
-
-    // Foreign key to case
     val caseId: Long,
-
-    // Session date (epoch millis)
     val sessionDate: Long,
-
-    // Source session (optional)
     val fromSession: String? = null,
-
-    // Postponement reason or notes (optional)
     val reason: String? = null,
-
-    // Decision/judgment in the session (optional)
     val decision: String? = null,
-
-    // Session creation timestamp
     val createdAt: Long = System.currentTimeMillis(),
-
-    // Session status
     val status: SessionStatus = SessionStatus.SCHEDULED,
-
-    // Additional notes
     val notes: String? = null,
-
-    // Session time (for more precise scheduling)
-    val sessionTime: String? = null // Format: "HH:mm"
+    val sessionTime: String? = null
 ) {
-    // Validation methods
-    fun isValid(): Boolean {
-        return caseId > 0 && sessionDate > 0
-    }
+    fun isValid(): Boolean = caseId > 0 && sessionDate > 0
 
-    // Check if session is in the past
-    fun isPast(): Boolean {
-        return sessionDate < System.currentTimeMillis()
-    }
+    fun isPast(): Boolean = sessionDate < System.currentTimeMillis()
 
-    // Check if session is today
     fun isToday(): Boolean {
-        val today = Calendar.getInstance()
-        val sessionCalendar = Calendar.getInstance().apply {
-            timeInMillis = sessionDate
-        }
-        return today.get(Calendar.YEAR) == sessionCalendar.get(Calendar.YEAR) &&
-                today.get(Calendar.DAY_OF_YEAR) == sessionCalendar.get(Calendar.DAY_OF_YEAR)
+        val today = LocalDate.now()
+        val sessionDateLocal = Instant.ofEpochMilli(sessionDate)
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate()
+        return today == sessionDateLocal
     }
 
-    // Check if session is upcoming (future)
-    fun isUpcoming(): Boolean {
-        return sessionDate > System.currentTimeMillis()
-    }
+    fun isUpcoming(): Boolean = sessionDate > System.currentTimeMillis()
 
-    // Format session date for display
     fun getFormattedDate(pattern: String = "yyyy-MM-dd"): String {
-        val dateFormat = SimpleDateFormat(pattern, Locale.getDefault())
-        return dateFormat.format(Date(sessionDate))
+        val formatter = DateTimeFormatter.ofPattern(pattern)
+        return Instant.ofEpochMilli(sessionDate)
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate()
+            .format(formatter)
     }
 
-    // Format session date and time for display
     fun getFormattedDateTime(): String {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val dateStr = dateFormat.format(Date(sessionDate))
-        return if (sessionTime != null) {
-            "$dateStr $sessionTime"
-        } else {
-            dateStr
-        }
+        val dateStr = getFormattedDate()
+        return sessionTime?.let { "$dateStr $it" } ?: dateStr
     }
 
-    // Get session status display text
-    fun getStatusDisplay(): String {
-        return when (status) {
-            SessionStatus.SCHEDULED -> "مجدولة"
-            SessionStatus.COMPLETED -> "مكتملة"
-            SessionStatus.POSTPONED -> "مؤجلة"
-            SessionStatus.CANCELLED -> "ملغية"
-        }
+    fun getStatusDisplay(): String = when (status) {
+        SessionStatus.SCHEDULED -> "مجدولة"
+        SessionStatus.COMPLETED -> "مكتملة"
+        SessionStatus.POSTPONED -> "مؤجلة"
+        SessionStatus.CANCELLED -> "ملغية"
     }
 
-    // Get reason or default text
-    fun getReasonDisplay(): String {
-        return reason?.takeIf { it.isNotBlank() } ?: "لا توجد ملاحظات"
-    }
+    fun getReasonDisplay(): String = reason?.takeIf { it.isNotBlank() } ?: "لا توجد ملاحظات"
 
-    // Get decision or default text
-    fun getDecisionDisplay(): String {
-        return decision?.takeIf { it.isNotBlank() } ?: "لم يتم اتخاذ قرار بعد"
-    }
+    fun getDecisionDisplay(): String = decision?.takeIf { it.isNotBlank() } ?: "لم يتم اتخاذ قرار بعد"
 
-    // Get from session or default text
-    fun getFromSessionDisplay(): String {
-        return fromSession?.takeIf { it.isNotBlank() } ?: "جلسة جديدة"
-    }
+    fun getFromSessionDisplay(): String = fromSession?.takeIf { it.isNotBlank() } ?: "جلسة جديدة"
 }
 
 enum class SessionStatus {
-    SCHEDULED,
-    COMPLETED,
-    POSTPONED,
-    CANCELLED
+    SCHEDULED, COMPLETED, POSTPONED, CANCELLED
 }

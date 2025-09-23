@@ -43,6 +43,7 @@ android {
     composeCompiler {
         reportsDestination = layout.buildDirectory.dir("compose_compiler")
     }
+
     packaging {
         resources {
             excludes += "META-INF/DEPENDENCIES"
@@ -57,7 +58,7 @@ android {
 }
 
 kotlin {
-    jvmToolchain(21) // ensures Kotlin compiles with JDK 21
+    jvmToolchain(21)
 
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
@@ -65,12 +66,18 @@ kotlin {
     }
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+    arg("room.incremental", "true")
+    arg("room.expandProjection", "true")
+}
+
 dependencies {
     // Core Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
-    
+
     // Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
@@ -80,39 +87,35 @@ dependencies {
     implementation(libs.compose.icons.core)
     implementation(libs.compose.icons.extended)
 
-
     // Navigation
     implementation(libs.androidx.navigation.compose)
-    
+
     // ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
-    
+
     // Room Database
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.paging)
-    implementation(libs.ui)
-    implementation(libs.androidx.espresso.core)
     ksp(libs.androidx.room.compiler)
-    
+
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
-    
-    // Google Sign-In - Updated to use Credential Manager API
+
+    // Google Sign-In
     implementation(libs.credential.manager)
     implementation(libs.credential.manager.play.services.auth)
     implementation(libs.play.services.auth)
     implementation(libs.google.auth.library.oauth2.http)
 
-
     // Google Drive API
     implementation(libs.google.api.services.drive)
     implementation(libs.google.api.client.android)
-    
+
     // JSON
     implementation(libs.gson)
-    
+
     // Date/Time
     implementation(libs.kotlinx.datetime)
     implementation(libs.androidx.foundation)

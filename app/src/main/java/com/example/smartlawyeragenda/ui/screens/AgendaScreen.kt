@@ -9,7 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Balance
+import androidx.compose.material.icons.filled.DataThresholding
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
@@ -32,6 +33,7 @@ import com.example.smartlawyeragenda.viewmodel.AgendaUiState
 import com.example.smartlawyeragenda.viewmodel.SessionWithCase
 import com.example.smartlawyeragenda.ui.components.*
 import com.example.smartlawyeragenda.ui.components.DateFilter
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,10 +83,10 @@ fun AgendaScreen(
                     },
                     actions = {
                         IconButton(onClick = { showStatistics = true }) {
-                            Icon(Icons.Default.Info, contentDescription = "إحصائيات", tint = Color.White)
+                            Icon(Icons.Default.DataThresholding, contentDescription = "إحصائيات", tint = Color.White)
                         }
                         IconButton(onClick = onCasesClick) {
-                            Icon(Icons.Default.Folder, contentDescription = "قضايا", tint = Color.White)
+                            Icon(Icons.Default.Balance, contentDescription = "قضايا", tint = Color.White)
                         }
                         IconButton(onClick = onSettingsClick) {
                             Icon(Icons.Default.Settings, contentDescription = "إعدادات", tint = Color.White)
@@ -403,7 +405,7 @@ fun StatsDashboard(statistics: OverallStatistics, modifier: Modifier = Modifier)
             StatisticsCard(
                 title = "القضايا",
                 value = statistics.totalCases.toString(),
-                icon = Icons.Default.Folder,
+                icon = Icons.Default.Balance,
                 color = Color(0xFF42A5F5),
                 modifier = Modifier.weight(1f)
             )

@@ -15,7 +15,7 @@ import com.example.smartlawyeragenda.data.entities.SessionEntity
 @Database(
     entities = [CaseEntity::class, SessionEntity::class],
     version = 2,
-    exportSchema = false
+    exportSchema = true
 )
 @TypeConverters(DatabaseConverters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -37,7 +37,7 @@ abstract class AppDatabase : RoomDatabase() {
                     DATABASE_NAME
                 )
                     .addMigrations(MIGRATION_1_2)
-                    .fallbackToDestructiveMigration(false)
+                    .fallbackToDestructiveMigrationOnDowngrade(false) // safer for downgrades
                     .build()
 
                 INSTANCE = instance
@@ -47,34 +47,32 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getInstance(context: Context): AppDatabase = getDatabase(context)
 
-        // Migration from version 1 to 2
+        // Migration from version 1 to 2 with safe column additions
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // Add new columns to cases table
-                db.execSQL("ALTER TABLE cases ADD COLUMN caseType TEXT")
-                db.execSQL("ALTER TABLE cases ADD COLUMN caseDescription TEXT")
-                db.execSQL("ALTER TABLE cases ADD COLUMN isActive INTEGER NOT NULL DEFAULT 1")
+                try {
+                    db.execSQL("ALTER TABLE cases ADD COLUMN caseType TEXT")
+                } catch (_: Exception) { }
+                try {
+                    db.execSQL("ALTER TABLE cases ADD COLUMN caseDescription TEXT")
+                } catch (_: Exception) { }
+                try {
+                    db.execSQL("ALTER TABLE cases ADD COLUMN isActive INTEGER NOT NULL DEFAULT 1")
+                } catch (_: Exception) { }
 
-                // Add new columns to sessions table
-                db.execSQL("ALTER TABLE sessions ADD COLUMN status TEXT NOT NULL DEFAULT 'SCHEDULED'")
-                db.execSQL("ALTER TABLE sessions ADD COLUMN notes TEXT")
-                db.execSQL("ALTER TABLE sessions ADD COLUMN sessionTime TEXT")
-
-                // Create new indices for better performance
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_cases_clientName ON cases(clientName)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_cases_createdAt ON cases(createdAt)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_sessions_sessionDate ON sessions(sessionDate)")
-                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_sessions_caseId_sessionDate ON sessions(caseId, sessionDate)")
+                try {
+                    db.execSQL("ALTER TABLE sessions ADD COLUMN status TEXT NOT NULL DEFAULT 'SCHEDULED'")
+                } catch (_: Exception) { }
+                try {
+                    db.execSQL("ALTER TABLE sessions ADD COLUMN notes TEXT")
+                } catch (_: Exception) { }
+                try {
+                    db.execSQL("ALTER TABLE sessions ADD COLUMN sessionTime TEXT")
+                } catch (_: Exception) { }
             }
         }
 
-        // Method to clear all data (for development/testing)
-        fun clearAllTables(context: Context) {
-            val db = getDatabase(context)
-            db.clearAllTables()
-        }
-
-        // Method to close database
+        // Method to close database safely
         fun closeDatabase() {
             INSTANCE?.close()
             INSTANCE = null

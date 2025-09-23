@@ -57,6 +57,8 @@ fun AddEditSessionScreen(
         mutableStateOf(existingSession?.let { dateFormatter.format(Date(it.sessionDate)) } ?: "")
     }
     var sessionTime by remember { mutableStateOf(existingSession?.sessionTime ?: "") }
+    var sessionReason by remember { mutableStateOf(existingSession?.reason ?: "") }
+    var sessionDecision by remember { mutableStateOf(existingSession?.decision ?: "") }
     var sessionNotes by remember { mutableStateOf(existingSession?.notes ?: "") }
 
     // Pickers
@@ -246,6 +248,25 @@ fun AddEditSessionScreen(
                                 }
                             }
                         }
+// --- Reason ---
+                        OutlinedTextField(
+                            value = sessionReason,
+                            onValueChange = { sessionReason = it },
+                            label = { Text("سبب التأجيل") },
+                            placeholder = { Text("أدخل سبب التأجيل إن وجد") },
+                            leadingIcon = { Icon(Icons.Default.Info, contentDescription = null) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+// --- Decision ---
+                        OutlinedTextField(
+                            value = sessionDecision,
+                            onValueChange = { sessionDecision = it },
+                            label = { Text("القرار") },
+                            placeholder = { Text("أدخل قرار المحكمة") },
+                            leadingIcon = { Icon(Icons.Default.Gavel, contentDescription = null) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
                         // --- Notes ---
                         OutlinedTextField(
@@ -288,10 +309,12 @@ fun AddEditSessionScreen(
                                     sessionDate = parsedDateMillis,
                                     sessionTime = sessionTime,
                                     notes = sessionNotes,
-                                    status = existingSession?.status ?: SessionStatus.SCHEDULED
+                                    status = existingSession?.status ?: SessionStatus.SCHEDULED,
+                                    fromSession = existingSession?.fromSession ?: "",
+                                    reason = sessionReason,      
+                                    decision = sessionDecision
                                 )
                                 onSave(session)
-                                navController.popBackStack()
                             },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(

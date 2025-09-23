@@ -160,18 +160,13 @@ fun AppNavHost(
         composable(NavigationConstants.ADD_SESSION_ROUTE) {
             AddEditSessionScreen(
                 navController = navController,
-                cases = if (uiState.cases.isNotEmpty()) uiState.cases else uiState.sessions.map { it.case }.distinctBy { it.caseId },
+                cases = uiState.cases.ifEmpty { uiState.sessions.map { it.case }.distinctBy { it.caseId } },
                 onSave = { session ->
                     // Get the case for this session
-                    val case = uiState.sessions.find { it.case.caseId == session.caseId }?.case
-                        ?: com.example.smartlawyeragenda.data.entities.CaseEntity(
-                            caseId = session.caseId,
-                            caseNumber = "Unknown",
-                            clientName = "Unknown"
-                        )
+                    val case = uiState.cases.find { it.caseId == session.caseId }
 
                     viewModel.saveSession(
-                        case = case,
+                        case = case ?: return@AddEditSessionScreen,
                         session = session,
                         createNextSession = false,
                         nextSessionDate = null
@@ -187,18 +182,13 @@ fun AppNavHost(
 
             AddEditSessionScreen(
                 navController = navController,
-                cases = if (uiState.cases.isNotEmpty()) uiState.cases else uiState.sessions.map { it.case }.distinctBy { it.caseId },
+                cases = uiState.cases.ifEmpty { uiState.sessions.map { it.case }.distinctBy { it.caseId } },
                 onSave = { session ->
                     // Get the case for this session
-                    val case = uiState.sessions.find { it.case.caseId == session.caseId }?.case
-                        ?: com.example.smartlawyeragenda.data.entities.CaseEntity(
-                            caseId = session.caseId,
-                            caseNumber = "Unknown",
-                            clientName = "Unknown"
-                        )
+                    val case = uiState.cases.find { it.caseId == session.caseId }
 
                     viewModel.saveSession(
-                        case = case,
+                        case = case ?: return@AddEditSessionScreen,
                         session = session,
                         createNextSession = false,
                         nextSessionDate = null
@@ -418,7 +408,7 @@ fun AppNavHost(
             }
 
             CasesScreen(
-                cases = if (uiState.cases.isNotEmpty()) uiState.cases else filteredCases,
+                cases = uiState.cases.ifEmpty { filteredCases },
                 caseStatistics = caseStatistics,
                 isLoading = uiState.isLoading || isSearching,
                 onBackClick = {
@@ -522,7 +512,7 @@ fun AppNavHost(
                     navController = navController,
                     existingCase = loadedCase!!,
                     onSave = { updatedCase ->
-                        viewModel.updateCase(updatedCase)
+                        viewModel.saveCase(updatedCase)
                         NavigationHelper.navigateBack(navController)
                     }
                 )

@@ -64,7 +64,8 @@ fun EditCaseScreen(
                                 opponentName = opponentName.trim().takeIf { it.isNotBlank() },
                                 caseType = caseType.trim().takeIf { it.isNotBlank() },
                                 caseDescription = caseDescription.trim().takeIf { it.isNotBlank() },
-                                isActive = isActive
+                                isActive = isActive,
+                                createdAt = existingCase.createdAt
                             )
                             onSave(updatedCase)
                         } else {

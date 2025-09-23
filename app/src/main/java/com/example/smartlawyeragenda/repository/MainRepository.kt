@@ -1,13 +1,16 @@
 package com.example.smartlawyeragenda.repository
 
+import androidx.room.withTransaction
 import com.example.smartlawyeragenda.data.AppDatabase
 import com.example.smartlawyeragenda.data.entities.CaseEntity
 import com.example.smartlawyeragenda.data.entities.SessionEntity
 import com.example.smartlawyeragenda.data.entities.SessionStatus
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import java.text.SimpleDateFormat
-import java.util.*
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 class MainRepository(
     private val database: AppDatabase
@@ -15,9 +18,7 @@ class MainRepository(
     private val caseDao = database.caseDao()
     private val sessionDao = database.sessionDao()
 
-    // -------------------------
-    // Case operations
-    // -------------------------
+    // -------------------- Case operations --------------------
     fun getAllCases(): Flow<List<CaseEntity>> = caseDao.getAllCases()
 
     suspend fun getCaseById(caseId: Long): CaseEntity? = caseDao.getCaseById(caseId)
@@ -27,17 +28,12 @@ class MainRepository(
     fun searchCases(query: String): Flow<List<CaseEntity>> = caseDao.searchCases(query)
 
     suspend fun insertCase(case: CaseEntity): Long {
-        // Validate case before inserting
-        if (!case.isValid()) {
-            throw IllegalArgumentException("Invalid case data")
-        }
+        require(case.isValid()) { "Invalid case data" }
         return caseDao.insertCase(case)
     }
 
     suspend fun updateCase(case: CaseEntity) {
-        if (!case.isValid()) {
-            throw IllegalArgumentException("Invalid case data")
-        }
+        require(case.isValid()) { "Invalid case data" }
         caseDao.updateCase(case)
     }
 
@@ -45,18 +41,13 @@ class MainRepository(
 
     suspend fun deleteCaseById(caseId: Long) = caseDao.deleteCaseById(caseId)
 
-    suspend fun isCaseNumberExists(caseNumber: String, excludeCaseId: Long = 0): Boolean {
-        return caseDao.isCaseNumberExists(caseNumber, excludeCaseId) > 0
-    }
+    suspend fun isCaseNumberExists(caseNumber: String, excludeCaseId: Long = 0): Boolean =
+        caseDao.isCaseNumberExists(caseNumber, excludeCaseId) > 0
 
-    fun getCasesWithUpcomingSessions(): Flow<List<CaseEntity>> {
-        val today = System.currentTimeMillis()
-        return caseDao.getCasesWithUpcomingSessions(today)
-    }
+    fun getCasesWithUpcomingSessions(): Flow<List<CaseEntity>> =
+        caseDao.getCasesWithUpcomingSessions(System.currentTimeMillis())
 
-    // -------------------------
-    // Session operations
-    // -------------------------
+    // -------------------- Session operations --------------------
     fun getSessionsByDateRange(startDate: Long, endDate: Long): Flow<List<SessionEntity>> =
         sessionDao.getSessionsByDateRange(startDate, endDate)
 
@@ -88,13 +79,9 @@ class MainRepository(
     fun searchSessions(query: String): Flow<List<SessionEntity>> = sessionDao.searchSessions(query)
 
     suspend fun insertSession(session: SessionEntity): Long {
-        // Validate session before inserting
-        if (!session.isValid()) {
-            throw IllegalArgumentException("Invalid session data")
-        }
+        require(session.isValid()) { "Invalid session data" }
 
-        // Check for duplicates
-        if (isSessionExists(session.caseId, session.sessionDate, session.sessionId)) {
+        if (isSessionExists(session.caseId, session.sessionDate, 0)) {
             throw IllegalStateException("Session already exists for this case and date")
         }
 
@@ -103,17 +90,13 @@ class MainRepository(
 
     suspend fun insertSessions(sessions: List<SessionEntity>): List<Long> {
         sessions.forEach { session ->
-            if (!session.isValid()) {
-                throw IllegalArgumentException("Invalid session data in list")
-            }
+            require(session.isValid()) { "Invalid session data in list" }
         }
         return sessionDao.insertSessions(sessions)
     }
 
     suspend fun updateSession(session: SessionEntity) {
-        if (!session.isValid()) {
-            throw IllegalArgumentException("Invalid session data")
-        }
+        require(session.isValid()) { "Invalid session data" }
         sessionDao.updateSession(session)
     }
 
@@ -125,20 +108,16 @@ class MainRepository(
 
     fun getAllSessions(): Flow<List<SessionEntity>> = sessionDao.getAllSessions()
 
-    suspend fun isSessionExists(caseId: Long, sessionDate: Long, excludeSessionId: Long = 0): Boolean {
-        return sessionDao.isSessionExists(caseId, sessionDate, excludeSessionId) > 0
-    }
+    suspend fun isSessionExists(caseId: Long, sessionDate: Long, excludeSessionId: Long = 0): Boolean =
+        sessionDao.isSessionExists(caseId, sessionDate, excludeSessionId) > 0
 
-    // -------------------------
-    // Combined operations
-    // -------------------------
+    // -------------------- Combined operations --------------------
     suspend fun saveCaseWithSession(
         case: CaseEntity,
         session: SessionEntity,
         createNextSession: Boolean = false,
         nextSessionDate: Long? = null
     ): Pair<Long, Long> {
-        // Insert or update case
         val caseId = if (case.caseId == 0L) {
             insertCase(case)
         } else {
@@ -146,17 +125,20 @@ class MainRepository(
             case.caseId
         }
 
-        // Insert session with the case ID
         val sessionWithCaseId = session.copy(caseId = caseId)
         val sessionId = insertSession(sessionWithCaseId)
 
-        // Auto-create next session if requested
         if (createNextSession && nextSessionDate != null && !isSessionExists(caseId, nextSessionDate)) {
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+            val dateStr = Instant.ofEpochMilli(session.sessionDate)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+                .format(formatter)
+
             val nextSession = SessionEntity(
                 caseId = caseId,
                 sessionDate = nextSessionDate,
-                fromSession = "مؤجلة من ${dateFormat.format(Date(session.sessionDate))}",
+                fromSession = "مؤجلة من $dateStr",
                 status = SessionStatus.SCHEDULED
             )
             insertSession(nextSession)
@@ -165,34 +147,21 @@ class MainRepository(
         return Pair(caseId, sessionId)
     }
 
-    // Delete case with all its sessions
     suspend fun deleteCaseWithSessions(caseId: Long) {
         deleteSessionsByCaseId(caseId)
         deleteCaseById(caseId)
     }
 
-    // -------------------------
-    // Statistics and Analytics
-    // -------------------------
-    suspend fun getTodaySessionsCount(): Int {
-        return getTodaySessions().first().size
-    }
+    // -------------------- Statistics --------------------
+    suspend fun getTodaySessionsCount(): Int = getTodaySessions().first().size
 
-    suspend fun getUpcomingSessionsCount(): Int {
-        return getUpcomingSessions().first().size
-    }
+    suspend fun getUpcomingSessionsCount(): Int = getUpcomingSessions().first().size
 
-    suspend fun getTotalCasesCount(): Int {
-        return caseDao.getCasesCount()
-    }
+    suspend fun getTotalCasesCount(): Int = caseDao.getCasesCount()
 
-    suspend fun getTotalSessionsCount(): Int {
-        return getAllSessions().first().size
-    }
+    suspend fun getTotalSessionsCount(): Int = getAllSessions().first().size
 
-    suspend fun getActivesCasesCount(): Int {
-        return getAllCases().first().count { it.isActive }
-    }
+    suspend fun getActivesCasesCount(): Int = caseDao.getActiveCasesCount()
 
     suspend fun getCaseStatistics(caseId: Long): CaseStatistics? {
         val case = getCaseById(caseId) ?: return null
@@ -211,137 +180,117 @@ class MainRepository(
         )
     }
 
-    suspend fun getOverallStatistics(): OverallStatistics {
-        val totalCases = getTotalCasesCount()
-        val activeCases = getActivesCasesCount()
-        val totalSessions = getTotalSessionsCount()
-        val todaySessions = getTodaySessionsCount()
-        val upcomingSessions = getUpcomingSessionsCount()
+    suspend fun getOverallStatistics(): OverallStatistics = OverallStatistics(
+        totalCases = getTotalCasesCount(),
+        activeCases = getActivesCasesCount(),
+        totalSessions = getTotalSessionsCount(),
+        todaySessions = getTodaySessionsCount(),
+        upcomingSessions = getUpcomingSessionsCount()
+    )
 
-        return OverallStatistics(
-            totalCases = totalCases,
-            activeCases = activeCases,
-            totalSessions = totalSessions,
-            todaySessions = todaySessions,
-            upcomingSessions = upcomingSessions
-        )
-    }
-
-    // -------------------------
-    // Data management
-    // -------------------------
+    // -------------------- Data management --------------------
     suspend fun deleteAllData() {
         sessionDao.deleteAllSessions()
         caseDao.deleteAllCases()
     }
 
-    suspend fun exportData(): DatabaseExport {
-        val cases = getAllCases().first()
-        val sessions = getAllSessions().first()
-        return DatabaseExport(
-            cases = cases,
-            sessions = sessions,
-            exportDate = System.currentTimeMillis()
-        )
-    }
+    suspend fun exportData(): DatabaseExport = DatabaseExport(
+        cases = getAllCases().first(),
+        sessions = getAllSessions().first(),
+        exportDate = System.currentTimeMillis()
+    )
 
     suspend fun importData(export: DatabaseExport): ImportResult {
-        return try {
+        return database.withTransaction {
             var importedCases = 0
             var importedSessions = 0
             var skippedCases = 0
             var skippedSessions = 0
 
-            // Import cases
-            export.cases.forEach { case ->
-                try {
-                    if (!isCaseNumberExists(case.caseNumber)) {
-                        insertCase(case.copy(caseId = 0)) // Reset ID for new insertion
-                        importedCases++
-                    } else {
+            try {
+                // Use DAO directly inside transaction
+                val existingCaseNumbers = caseDao.getAllCases().first().map { it.caseNumber }.toSet()
+                val caseNumberToIdMap = mutableMapOf<String, Long>()
+
+                // Import cases using DAO directly
+                for (case in export.cases) {
+                    try {
+                        if (!existingCaseNumbers.contains(case.caseNumber)) {
+                            val newId = caseDao.insertCase(case.copy(caseId = 0))
+                            caseNumberToIdMap[case.caseNumber] = newId
+                            importedCases++
+                        } else {
+                            val existing = caseDao.getCaseByNumber(case.caseNumber)
+                            if (existing != null) {
+                                caseDao.updateCase(case.copy(caseId = existing.caseId))
+                                caseNumberToIdMap[case.caseNumber] = existing.caseId
+                            }
+                            skippedCases++
+                        }
+                    } catch (_: Exception) {
                         skippedCases++
                     }
-                } catch (_: Exception) {
-                    skippedCases++
                 }
-            }
 
-            // Import sessions
-            export.sessions.forEach { session ->
-                try {
-                    val case = getCaseByNumber(export.cases.find { it.caseId == session.caseId }?.caseNumber ?: "")
-                    if (case != null && !isSessionExists(case.caseId, session.sessionDate)) {
-                        insertSession(session.copy(sessionId = 0, caseId = case.caseId))
-                        importedSessions++
-                    } else {
+                // Import sessions using DAO directly
+                for (session in export.sessions) {
+                    try {
+                        val originalCase = export.cases.find { it.caseId == session.caseId }
+                        if (originalCase != null) {
+                            val newCaseId = caseNumberToIdMap[originalCase.caseNumber]
+                            if (newCaseId != null) {
+                                // Use DAO directly for duplicate check
+                                val existingSession = sessionDao.getSessionByCaseAndDate(newCaseId, session.sessionDate)
+                                if (existingSession == null) {
+                                    sessionDao.insertSession(session.copy(sessionId = 0, caseId = newCaseId))
+                                    importedSessions++
+                                } else {
+                                    skippedSessions++
+                                }
+                            } else {
+                                skippedSessions++
+                            }
+                        } else {
+                            skippedSessions++
+                        }
+                    } catch (_: Exception) {
                         skippedSessions++
                     }
-                } catch (_: Exception) {
-                    skippedSessions++
                 }
-            }
 
-            ImportResult(
-                success = true,
-                importedCases = importedCases,
-                importedSessions = importedSessions,
-                skippedCases = skippedCases,
-                skippedSessions = skippedSessions,
-                error = null
-            )
-        } catch (e: Exception) {
-            ImportResult(
-                success = false,
-                importedCases = 0,
-                importedSessions = 0,
-                skippedCases = 0,
-                skippedSessions = 0,
-                error = e.message
-            )
+                ImportResult(
+                    success = true,
+                    importedCases = importedCases,
+                    importedSessions = importedSessions,
+                    skippedCases = skippedCases,
+                    skippedSessions = skippedSessions,
+                    error = null
+                )
+            } catch (e: Exception) {
+                ImportResult(
+                    success = false,
+                    importedCases = importedCases,
+                    importedSessions = importedSessions,
+                    skippedCases = skippedCases,
+                    skippedSessions = skippedSessions,
+                    error = e.message
+                )
+            }
         }
     }
 
-    // -------------------------
-    // Utility methods
-    // -------------------------
+    // -------------------- Utility (java.time) --------------------
     private fun getTodayBounds(): Pair<Long, Long> {
-        val calendar = Calendar.getInstance()
-
-        // Start of today
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        val startOfDay = calendar.timeInMillis
-
-        // End of today
-        calendar.set(Calendar.HOUR_OF_DAY, 23)
-        calendar.set(Calendar.MINUTE, 59)
-        calendar.set(Calendar.SECOND, 59)
-        calendar.set(Calendar.MILLISECOND, 999)
-        val endOfDay = calendar.timeInMillis
-
+        val today = LocalDate.now()
+        val startOfDay = today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val endOfDay = today.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() - 1
         return Pair(startOfDay, endOfDay)
     }
 
     private fun getDateBounds(dateMillis: Long): Pair<Long, Long> {
-        val calendar = Calendar.getInstance()
-        calendar.timeInMillis = dateMillis
-
-        // Start of day
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        val startOfDay = calendar.timeInMillis
-
-        // End of day
-        calendar.set(Calendar.HOUR_OF_DAY, 23)
-        calendar.set(Calendar.MINUTE, 59)
-        calendar.set(Calendar.SECOND, 59)
-        calendar.set(Calendar.MILLISECOND, 999)
-        val endOfDay = calendar.timeInMillis
-
+        val date = Instant.ofEpochMilli(dateMillis).atZone(ZoneId.systemDefault()).toLocalDate()
+        val startOfDay = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val endOfDay = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() - 1
         return Pair(startOfDay, endOfDay)
     }
 
@@ -350,95 +299,45 @@ class MainRepository(
         return getSessionsByDay(startOfDay, endOfDay)
     }
 
-    // Get sessions for a specific week
     fun getSessionsForWeek(weekStartMillis: Long): Flow<List<SessionEntity>> {
-        val calendar = Calendar.getInstance()
-        calendar.timeInMillis = weekStartMillis
+        val weekStart = Instant.ofEpochMilli(weekStartMillis).atZone(ZoneId.systemDefault()).toLocalDate()
+        val monday = weekStart.with(java.time.DayOfWeek.MONDAY)
+        val sunday = monday.plusDays(6)
 
-        // Start of week (assuming Monday is first day)
-        calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        val weekStart = calendar.timeInMillis
+        val startMillis = monday.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val endMillis = sunday.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-        // End of week (Sunday)
-        calendar.add(Calendar.DAY_OF_WEEK, 6)
-        calendar.set(Calendar.HOUR_OF_DAY, 23)
-        calendar.set(Calendar.MINUTE, 59)
-        calendar.set(Calendar.SECOND, 59)
-        calendar.set(Calendar.MILLISECOND, 999)
-        val weekEnd = calendar.timeInMillis
-
-        return getSessionsByDateRange(weekStart, weekEnd)
+        return getSessionsByDateRange(startMillis, endMillis)
     }
 
-    // Get sessions for a specific month
     fun getSessionsForMonth(monthStartMillis: Long): Flow<List<SessionEntity>> {
-        val calendar = Calendar.getInstance()
-        calendar.timeInMillis = monthStartMillis
+        val monthStart = Instant.ofEpochMilli(monthStartMillis).atZone(ZoneId.systemDefault()).toLocalDate()
+        val firstDay = monthStart.withDayOfMonth(1)
+        val lastDay = firstDay.plusMonths(1).minusDays(1)
 
-        // Start of month
-        calendar.set(Calendar.DAY_OF_MONTH, 1)
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        val monthStart = calendar.timeInMillis
+        val startMillis = firstDay.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val endMillis = lastDay.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-        // End of month
-        calendar.add(Calendar.MONTH, 1)
-        calendar.add(Calendar.DAY_OF_MONTH, -1)
-        calendar.set(Calendar.HOUR_OF_DAY, 23)
-        calendar.set(Calendar.MINUTE, 59)
-        calendar.set(Calendar.SECOND, 59)
-        calendar.set(Calendar.MILLISECOND, 999)
-        val monthEnd = calendar.timeInMillis
-
-        return getSessionsByDateRange(monthStart, monthEnd)
+        return getSessionsByDateRange(startMillis, endMillis)
     }
 
-    // -------------------------
-    // Sample Data Operations
-    // -------------------------
+    // -------------------- Sample data --------------------
     suspend fun populateSampleData() {
-        try {
-            // Check if data already exists
-            val existingCasesCount = getTotalCasesCount()
-            if (existingCasesCount > 0) {
-                return // Don't populate if data already exists
-            }
+        if (getTotalCasesCount() > 0) return
 
-            val (sampleCases, sampleSessions) = com.example.smartlawyeragenda.data.SampleDataGenerator.generateSampleData()
+        val (sampleCases, sampleSessions) = com.example.smartlawyeragenda.data.SampleDataGenerator.generateSampleData()
 
-            // Insert sample cases
-            sampleCases.forEach { case ->
-                insertCase(case)
-            }
-
-            // Insert sample sessions
-            sampleSessions.forEach { session ->
-                insertSession(session)
-            }
-        } catch (e: Exception) {
-            throw Exception("Failed to populate sample data: ${e.message}")
-        }
+        sampleCases.forEach { case -> insertCase(case) }
+        sampleSessions.forEach { session -> insertSession(session) }
     }
 
     suspend fun clearAllData() {
-        try {
-            // Delete all sessions first (due to foreign key constraints)
-            sessionDao.deleteAllSessions()
-            // Then delete all cases
-            caseDao.deleteAllCases()
-        } catch (e: Exception) {
-            throw Exception("Failed to clear data: ${e.message}")
-        }
+        sessionDao.deleteAllSessions()
+        caseDao.deleteAllCases()
     }
 }
 
-// Data classes for statistics and operations
+// -------------------- Data classes --------------------
 data class CaseStatistics(
     val case: CaseEntity,
     val totalSessions: Int,

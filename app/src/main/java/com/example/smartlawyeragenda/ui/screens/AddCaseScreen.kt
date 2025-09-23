@@ -59,12 +59,15 @@ fun AddCaseScreen(
                             if (validateInput(caseNumber, clientName)) {
                                 isLoading = true
                                 val newCase = CaseEntity(
+                                    caseId = 0L,
                                     caseNumber = caseNumber.trim(),
                                     rollNumber = rollNumber.trim().takeIf { it.isNotBlank() },
                                     clientName = clientName.trim(),
                                     opponentName = opponentName.trim().takeIf { it.isNotBlank() },
                                     caseType = caseType.trim().takeIf { it.isNotBlank() },
-                                    caseDescription = caseDescription.trim().takeIf { it.isNotBlank() }
+                                    caseDescription = caseDescription.trim().takeIf { it.isNotBlank() },
+                                    isActive = true,
+                                    createdAt = System.currentTimeMillis()
                                 )
                                 onSave(newCase)
                             } else {

@@ -24,7 +24,6 @@ import androidx.navigation.compose.rememberNavController
 import com.example.smartlawyeragenda.data.entities.CaseEntity
 import com.example.smartlawyeragenda.data.entities.SessionEntity
 import com.example.smartlawyeragenda.data.entities.SessionStatus
-import com.example.smartlawyeragenda.ui.components.*
 import com.example.smartlawyeragenda.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -36,23 +35,30 @@ import java.util.*
 @Composable
 fun AddEditSessionScreen(
     navController: NavController,
-    cases: List<CaseEntity>, // 🟢 نمرر لستة القضايا من الـ ViewModel
+    cases: List<CaseEntity>,
     existingSession: SessionEntity? = null,
     onSave: (SessionEntity) -> Unit
 ) {
     // Formatter للتاريخ
-    val dateFormatter = remember {
-        SimpleDateFormat("yyyy/MM/dd", Locale.Builder().setLanguage("ar").setRegion("EG").build())
-    }
+    val dateFormatter = SimpleDateFormat(
+        "yyyy/MM/dd",
+        Locale.Builder().setLanguage("ar").setRegion("EG").build()
+    )
+
 
     // --- Form state ---
-    var selectedCase by remember { mutableStateOf<CaseEntity?>(null) }
-    var sessionDate by remember {
+    var selectedCase by remember {
         mutableStateOf(
-            existingSession?.let { dateFormatter.format(Date(it.sessionDate)) } ?: ""
-        )
+            existingSession?.let { session ->
+            cases.find { it.caseId == session.caseId }
+        })
+    }
+    var sessionDate by remember {
+        mutableStateOf(existingSession?.let { dateFormatter.format(Date(it.sessionDate)) } ?: "")
     }
     var sessionTime by remember { mutableStateOf(existingSession?.sessionTime ?: "") }
+    var sessionReason by remember { mutableStateOf(existingSession?.reason ?: "") }
+    var sessionDecision by remember { mutableStateOf(existingSession?.decision ?: "") }
     var sessionNotes by remember { mutableStateOf(existingSession?.notes ?: "") }
 
     // Pickers
@@ -135,7 +141,7 @@ fun AddEditSessionScreen(
                         // --- Select Case ---
                         ExposedDropdownMenuBox(
                             expanded = expandedCaseMenu,
-                            onExpandedChange = { expandedCaseMenu = !expandedCaseMenu }
+                            onExpandedChange = { expandedCaseMenu = it }
                         ) {
                             OutlinedTextField(
                                 value = selectedCase?.let { "${it.caseNumber} - ${it.clientName}" }
@@ -143,7 +149,10 @@ fun AddEditSessionScreen(
                                 onValueChange = {},
                                 label = { Text("القضية المرتبطة") },
                                 readOnly = true,
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expandedCaseMenu) },
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCaseMenu)
+                                },
+                                colors = OutlinedTextFieldDefaults.colors(),
                                 modifier = Modifier
                                     .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true)
                                     .fillMaxWidth()
@@ -152,103 +161,175 @@ fun AddEditSessionScreen(
                                 expanded = expandedCaseMenu,
                                 onDismissRequest = { expandedCaseMenu = false }
                             ) {
-                                cases.forEach { case ->
+                                if (cases.isEmpty()) {
                                     DropdownMenuItem(
-                                        text = { Text("${case.caseNumber} - ${case.clientName}") },
-                                        onClick = {
-                                            selectedCase = case
-                                            expandedCaseMenu = false
-                                        }
+                                        text = { Text("لا توجد قضايا متاحة") },
+                                        onClick = { },
+                                        enabled = false
                                     )
+                                } else {
+                                    cases.forEach { case ->
+                                        DropdownMenuItem(
+                                            text = { Text("${case.caseNumber} - ${case.clientName}") },
+                                            onClick = {
+                                                selectedCase = case
+                                                expandedCaseMenu = false
+                                                errorMessage = null
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
 
                         // --- Session Date ---
-                        EnhancedTextField(
-                            value = sessionDate,
-                            onValueChange = { },
-                            label = "تاريخ الجلسة",
-                            placeholder = "اختر تاريخ الجلسة",
-                            leadingIcon = Icons.Default.CalendarToday,
-                            trailingIcon = Icons.Default.ArrowDropDown,
-                            onTrailingIconClick = { showDatePicker = true },
-                            enabled = false,
+                        OutlinedTextField(
+                            value = sessionDate.ifBlank { "" },
+                            onValueChange = {},
+                            label = { Text("تاريخ الجلسة") },
+                            placeholder = { Text("اختر تاريخ الجلسة") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarToday,
+                                    contentDescription = null
+                                )
+                            },
+                            trailingIcon = {
+                                IconButton(onClick = { showDatePicker = true }) {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = "اختر تاريخ"
+                                    )
+                                }
+                            },
+                            readOnly = true,
                             modifier = Modifier.fillMaxWidth()
                         )
 
                         // --- Session Time ---
                         ExposedDropdownMenuBox(
                             expanded = showTimePicker,
-                            onExpandedChange = { showTimePicker = !showTimePicker }
+                            onExpandedChange = { showTimePicker = it }
                         ) {
-                            EnhancedTextField(
-                                value = sessionTime.ifBlank { "اختر وقت الجلسة" },
-                                onValueChange = { },
-                                label = "وقت الجلسة",
-                                placeholder = "اختر وقت الجلسة",
-                                leadingIcon = Icons.Default.AccessTime,
-                                trailingIcon = Icons.Default.ArrowDropDown,
-                                onTrailingIconClick = { showTimePicker = !showTimePicker },
-                                enabled = false,
+                            OutlinedTextField(
+                                value = sessionTime.ifBlank { "" },
+                                onValueChange = {},
+                                label = { Text("وقت الجلسة") },
+                                placeholder = { Text("اختر وقت الجلسة") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.AccessTime,
+                                        contentDescription = null
+                                    )
+                                },
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = showTimePicker)
+                                },
+                                readOnly = true,
                                 modifier = Modifier
                                     .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true)
                                     .fillMaxWidth()
                             )
-                            val options = listOf("صباحاً", "مساءً")
+
+                            val timeOptions = listOf("صباحًا", "مساءً")
                             ExposedDropdownMenu(
                                 expanded = showTimePicker,
                                 onDismissRequest = { showTimePicker = false }
                             ) {
-                                options.forEach { option ->
+                                timeOptions.forEach { option ->
                                     DropdownMenuItem(
                                         text = { Text(option) },
                                         onClick = {
                                             sessionTime = option
                                             showTimePicker = false
+                                            errorMessage = null
                                         }
                                     )
                                 }
                             }
                         }
+// --- Reason ---
+                        OutlinedTextField(
+                            value = sessionReason,
+                            onValueChange = { sessionReason = it },
+                            label = { Text("سبب التأجيل") },
+                            placeholder = { Text("أدخل سبب التأجيل إن وجد") },
+                            leadingIcon = { Icon(Icons.Default.Info, contentDescription = null) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+// --- Decision ---
+                        OutlinedTextField(
+                            value = sessionDecision,
+                            onValueChange = { sessionDecision = it },
+                            label = { Text("القرار") },
+                            placeholder = { Text("أدخل قرار المحكمة") },
+                            leadingIcon = { Icon(Icons.Default.Gavel, contentDescription = null) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
                         // --- Notes ---
-                        EnhancedTextField(
+                        OutlinedTextField(
                             value = sessionNotes,
                             onValueChange = { sessionNotes = it },
-                            label = "ملاحظات",
-                            placeholder = "أدخل ملاحظات إضافية...",
-                            leadingIcon = Icons.AutoMirrored.Filled.Note,
-                            singleLine = false,
+                            label = { Text("ملاحظات") },
+                            placeholder = { Text("أدخل ملاحظات إضافية...") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Note,
+                                    contentDescription = null
+                                )
+                            },
+                            minLines = 3,
+                            maxLines = 5,
                             modifier = Modifier.fillMaxWidth()
                         )
 
                         Spacer(Modifier.height(AppSpacing.Large))
 
                         // --- Save Button ---
-                        EnhancedButton(
+                        Button(
                             onClick = {
-                                if (selectedCase == null) {
-                                    errorMessage = "يجب اختيار قضية للجلسة"
-                                    return@EnhancedButton
+                                // دمج رسائل الخطأ في خط واحد
+                                val errors = mutableListOf<String>()
+                                if (selectedCase == null) errors.add("يجب اختيار قضية")
+                                if (sessionDate.isBlank()) errors.add("يجب اختيار تاريخ الجلسة")
+                                if (sessionTime.isBlank()) errors.add("يجب اختيار وقت الجلسة")
+                                if (errors.isNotEmpty()) {
+                                    errorMessage = errors.joinToString("، ")
+                                    return@Button
                                 }
+
+                                val parsedDateMillis = runCatching { dateFormatter.parse(sessionDate)?.time }
+                                    .getOrNull() ?: System.currentTimeMillis()
+
                                 val session = SessionEntity(
                                     sessionId = existingSession?.sessionId ?: 0L,
                                     caseId = selectedCase!!.caseId,
-                                    sessionDate = dateFormatter.parse(sessionDate)?.time
-                                        ?: System.currentTimeMillis(),
+                                    sessionDate = parsedDateMillis,
                                     sessionTime = sessionTime,
                                     notes = sessionNotes,
-                                    status = existingSession?.status ?: SessionStatus.SCHEDULED
+                                    status = existingSession?.status ?: SessionStatus.SCHEDULED,
+                                    fromSession = existingSession?.fromSession ?: "",
+                                    reason = sessionReason,      
+                                    decision = sessionDecision
                                 )
                                 onSave(session)
-                                navController.popBackStack()
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            text = if (existingSession == null) "إضافة الجلسة" else "حفظ التعديلات",
-                            icon = if (existingSession == null) Icons.Default.Add else Icons.Default.Save,
-                            variant = ButtonVariant.Primary
-                        )
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AppColors.Primary
+                            )
+                        ) {
+                            Icon(
+                                imageVector = if (existingSession == null) Icons.Default.Add else Icons.Default.Save,
+                                contentDescription = null,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text(
+                                text = if (existingSession == null) "إضافة الجلسة" else "حفظ التعديلات"
+                            )
+                        }
                     }
                 }
             }
@@ -256,27 +337,32 @@ fun AddEditSessionScreen(
 
         // --- Date Picker Dialog ---
         if (showDatePicker) {
+            val datePickerState = rememberDatePickerState(
+                initialSelectedDateMillis = if (sessionDate.isNotBlank()) {
+                    runCatching { dateFormatter.parse(sessionDate)?.time }.getOrNull()
+                } else {
+                    System.currentTimeMillis()
+                }
+            )
+
             DatePickerDialog(
                 onDismissRequest = { showDatePicker = false },
                 confirmButton = {
-                    TextButton(onClick = { showDatePicker = false }) {
-                        Text("موافق")
-                    }
+                    TextButton(
+                        onClick = {
+                            datePickerState.selectedDateMillis?.let { millis ->
+                                sessionDate = dateFormatter.format(Date(millis))
+                                errorMessage = null
+                            }
+                            showDatePicker = false
+                        }
+                    ) { Text("موافق") }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showDatePicker = false }) {
-                        Text("إلغاء")
-                    }
+                    TextButton(onClick = { showDatePicker = false }) { Text("إلغاء") }
                 }
             ) {
-                val datePickerState = rememberDatePickerState()
                 DatePicker(state = datePickerState)
-
-                LaunchedEffect(datePickerState.selectedDateMillis) {
-                    datePickerState.selectedDateMillis?.let { millis ->
-                        sessionDate = dateFormatter.format(Date(millis))
-                    }
-                }
             }
         }
     }
@@ -286,8 +372,8 @@ fun AddEditSessionScreen(
 @Composable
 fun AddEditSessionScreenPreview() {
     val sampleCases = listOf(
-        CaseEntity(1, "123", "10", "أحمد", "محمود", "11/12/2025", "وصف تجريبي"),
-        CaseEntity(2, "124", "11", "سارة", "شركة X", "11/12/2025", "وصف آخر")
+        CaseEntity(1, "123", "10", "أحمد", "محمد", System.currentTimeMillis(), "وصف تجريبي"),
+        CaseEntity(2, "124", "11", "سارة", "شركة X", System.currentTimeMillis(), "وصف آخر")
     )
     MaterialTheme {
         AddEditSessionScreen(

@@ -96,15 +96,6 @@ fun AppNavHost(
                 onCasesClick = {
                     NavigationHelper.navigateToCases(navController)
                 },
-                onDateSelected = { dateMillis ->
-                    isProcessing = true
-                    viewModel.selectDate(dateMillis)
-                    // Simulate processing delay
-                    kotlinx.coroutines.GlobalScope.launch {
-                        kotlinx.coroutines.delay(500)
-                        isProcessing = false
-                    }
-                },
                 onSearchQuery = { query ->
                     isProcessing = true
                     viewModel.searchSessions(query)
@@ -112,6 +103,17 @@ fun AppNavHost(
                     kotlinx.coroutines.GlobalScope.launch {
                         kotlinx.coroutines.delay(300)
                         isProcessing = false
+                    }
+                },
+                onDateFilterSelected = { filter ->
+                    // Delegate to VM per filter type
+                    when (filter) {
+                        is com.example.smartlawyeragenda.ui.components.DateFilter.Today -> viewModel.selectDate(filter.startDate)
+                        is com.example.smartlawyeragenda.ui.components.DateFilter.Tomorrow -> viewModel.selectDate(filter.startDate)
+                        is com.example.smartlawyeragenda.ui.components.DateFilter.ThisWeek -> viewModel.getSessionsForWeek(filter.startDate)
+                        is com.example.smartlawyeragenda.ui.components.DateFilter.NextWeek -> viewModel.getSessionsForWeek(filter.startDate)
+                        is com.example.smartlawyeragenda.ui.components.DateFilter.ThisMonth -> viewModel.getSessionsForMonth(filter.startDate)
+                        com.example.smartlawyeragenda.ui.components.DateFilter.Upcoming -> viewModel.getUpcomingSessions()
                     }
                 },
                 onUpdateSessionStatus = { sessionId, status ->
@@ -158,18 +160,13 @@ fun AppNavHost(
         composable(NavigationConstants.ADD_SESSION_ROUTE) {
             AddEditSessionScreen(
                 navController = navController,
-                caseId = 0L, // Will show case selection
+                cases = uiState.cases.ifEmpty { uiState.sessions.map { it.case }.distinctBy { it.caseId } },
                 onSave = { session ->
                     // Get the case for this session
-                    val case = uiState.sessions.find { it.case.caseId == session.caseId }?.case
-                        ?: com.example.smartlawyeragenda.data.entities.CaseEntity(
-                            caseId = session.caseId,
-                            caseNumber = "Unknown",
-                            clientName = "Unknown"
-                        )
+                    val case = uiState.cases.find { it.caseId == session.caseId }
 
                     viewModel.saveSession(
-                        case = case,
+                        case = case ?: return@AddEditSessionScreen,
                         session = session,
                         createNextSession = false,
                         nextSessionDate = null
@@ -185,18 +182,13 @@ fun AppNavHost(
 
             AddEditSessionScreen(
                 navController = navController,
-                caseId = caseId,
+                cases = uiState.cases.ifEmpty { uiState.sessions.map { it.case }.distinctBy { it.caseId } },
                 onSave = { session ->
                     // Get the case for this session
-                    val case = uiState.sessions.find { it.case.caseId == session.caseId }?.case
-                        ?: com.example.smartlawyeragenda.data.entities.CaseEntity(
-                            caseId = session.caseId,
-                            caseNumber = "Unknown",
-                            clientName = "Unknown"
-                        )
+                    val case = uiState.cases.find { it.caseId == session.caseId }
 
                     viewModel.saveSession(
-                        case = case,
+                        case = case ?: return@AddEditSessionScreen,
                         session = session,
                         createNextSession = false,
                         nextSessionDate = null
@@ -224,7 +216,7 @@ fun AppNavHost(
                 // Session found in current state
                 AddEditSessionScreen(
                     navController = navController,
-                    caseId = sessionWithCase.case.caseId,
+                    cases = listOf(sessionWithCase.case),
                     existingSession = sessionWithCase.session,
                     onSave = { session ->
                         viewModel.saveSession(
@@ -270,7 +262,7 @@ fun AppNavHost(
                         // Show edit screen with loaded data
                         AddEditSessionScreen(
                             navController = navController,
-                            caseId = loadedCase!!.caseId,
+                            cases = loadedCase?.let { listOf(it) } ?: emptyList(),
                             existingSession = loadedSession,
                             onSave = { session ->
                                 viewModel.saveSession(
@@ -315,6 +307,8 @@ fun AppNavHost(
                 onExportCsvClick = {
                     showCsvExportDialog = true
                 },
+                onPopulateSampleDataClick = { viewModel.populateSampleData() },
+                onClearAllDataClick = { viewModel.clearAllData() },
                 onBackClick = {
                     NavigationHelper.navigateBack(navController)
                 }
@@ -414,7 +408,7 @@ fun AppNavHost(
             }
 
             CasesScreen(
-                cases = filteredCases,
+                cases = uiState.cases.ifEmpty { filteredCases },
                 caseStatistics = caseStatistics,
                 isLoading = uiState.isLoading || isSearching,
                 onBackClick = {
@@ -472,7 +466,7 @@ fun AppNavHost(
                     caseTitle = case.getDisplayName(),
                     isCurrentlyActive = case.isActive,
                     onConfirm = {
-                        // TODO: Implement case status toggle
+                        viewModel.toggleCaseStatus(case.caseId)
                         showToggleDialog = null
                     },
                     onDismiss = { showToggleDialog = null },
@@ -488,17 +482,42 @@ fun AppNavHost(
             )
         }
 
-        // Add Case Screen (placeholder for future implementation)
+        // Add Case Screen
         composable(NavigationConstants.ADD_CASE_ROUTE) {
-            // TODO: Implement AddCaseScreen
-            androidx.compose.material3.Text("Add Case Screen - Coming Soon")
+            AddCaseScreen(
+                navController = navController,
+                onSave = { newCase ->
+                    viewModel.saveCase(newCase)
+                    NavigationHelper.navigateBack(navController)
+                }
+            )
         }
 
-        // Edit Case Screen (placeholder for future implementation)
+        // Edit Case Screen
         composable(NavigationConstants.EDIT_CASE_WITH_ID_ROUTE) { backStackEntry ->
             val caseId = backStackEntry.arguments?.getString(NavigationConstants.Arguments.CASE_ID)?.toLongOrNull()
-            // TODO: Implement EditCaseScreen
-            androidx.compose.material3.Text("Edit Case Screen - Coming Soon (Case ID: $caseId)")
+            var loadedCase by remember { mutableStateOf<com.example.smartlawyeragenda.data.entities.CaseEntity?>(null) }
+            var isLoading by remember { mutableStateOf(true) }
+
+            LaunchedEffect(caseId) {
+                if (caseId != null) {
+                    loadedCase = viewModel.getCaseById(caseId)
+                }
+                isLoading = false
+            }
+
+            when {
+                isLoading -> androidx.compose.material3.CircularProgressIndicator()
+                loadedCase != null -> EditCaseScreen(
+                    navController = navController,
+                    existingCase = loadedCase!!,
+                    onSave = { updatedCase ->
+                        viewModel.saveCase(updatedCase)
+                        NavigationHelper.navigateBack(navController)
+                    }
+                )
+                else -> NavigationHelper.navigateBack(navController)
+            }
         }
     }
 }

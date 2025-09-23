@@ -50,7 +50,8 @@ fun CustomDateFilterDropdown(
             DateFilter.Tomorrow(),
             DateFilter.ThisWeek(),
             DateFilter.NextWeek(),
-            DateFilter.ThisMonth()
+            DateFilter.ThisMonth(),
+            DateFilter.Upcoming
         )
     }
 

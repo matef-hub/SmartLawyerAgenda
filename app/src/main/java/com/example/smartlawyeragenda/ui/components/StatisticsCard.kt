@@ -14,8 +14,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.example.smartlawyeragenda.repository.OverallStatistics
 import java.text.SimpleDateFormat
@@ -41,9 +41,9 @@ fun StatisticsCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(color.copy(alpha = 0.15f), CircleShape),
+            modifier = Modifier
+                .size(48.dp)
+                .background(Color(color.red, color.green, color.blue, 0.15f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

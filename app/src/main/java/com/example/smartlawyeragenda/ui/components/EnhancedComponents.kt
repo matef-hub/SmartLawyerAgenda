@@ -31,6 +31,9 @@ import com.example.smartlawyeragenda.repository.OverallStatistics
 import com.example.smartlawyeragenda.repository.CaseStatistics
 import com.example.smartlawyeragenda.ui.screens.StatisticItem
 import com.example.smartlawyeragenda.ui.theme.AppColors
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import java.util.Calendar
 import java.text.SimpleDateFormat
 import java.util.*
@@ -1026,10 +1029,50 @@ fun AppExposedDropdownMenu(
         onDismissRequest = onDismissRequest,
         modifier = modifier
             .heightIn(max = 250.dp)
-            .clip(RoundedCornerShape(12))
             .background(AppColors.SurfaceVariant),
         content = content
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppExposedDropdownMenuBox(
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    anchor: @Composable (Modifier) -> Unit,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    var anchorWidth by remember { mutableStateOf(0.dp) }
+    val density = LocalDensity.current
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = onExpandedChange,
+        modifier = modifier
+    ) {
+        Box(
+            modifier = Modifier
+                .onGloballyPositioned { coordinates ->
+                    anchorWidth = with(density) { coordinates.size.width.toDp() }
+                }
+        ) {
+            anchor(
+                Modifier
+                    .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
+                    .fillMaxWidth()
+            )
+        }
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { onExpandedChange(false) },
+            modifier = Modifier
+                .heightIn(max = 250.dp)
+                .background(AppColors.SurfaceVariant),
+            content = content
+        )
+    }
 }
 
 

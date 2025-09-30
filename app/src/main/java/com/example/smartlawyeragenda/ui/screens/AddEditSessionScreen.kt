@@ -25,7 +25,7 @@ import com.example.smartlawyeragenda.data.entities.CaseEntity
 import com.example.smartlawyeragenda.data.entities.SessionEntity
 import com.example.smartlawyeragenda.data.entities.SessionStatus
 import com.example.smartlawyeragenda.ui.components.EnhancedTextField
-import com.example.smartlawyeragenda.ui.components.AppExposedDropdownMenu
+import com.example.smartlawyeragenda.ui.components.AppExposedDropdownMenuBox
 import com.example.smartlawyeragenda.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -141,27 +141,23 @@ fun AddEditSessionScreen(
                         }
 
                         // --- Select Case ---
-                        ExposedDropdownMenuBox(
+                        AppExposedDropdownMenuBox(
                             expanded = expandedCaseMenu,
-                            onExpandedChange = { expandedCaseMenu = it }
-                        ) {
-                            EnhancedTextField(
-                                modifier = Modifier
-                                    .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true)
-                                    .fillMaxWidth(),
-                                value = selectedCase?.let { "${it.caseNumber} - ${it.clientName}" }
-                                    ?: "اختر القضية",
-                                onValueChange = {},
-                                label = { Text("القضية المرتبطة") },
-                                readOnly = true,
-                                trailingIcon = {
-                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCaseMenu)
-                                },
-                            )
-                            AppExposedDropdownMenu(
-                                expanded = expandedCaseMenu,
-                                onDismissRequest = { expandedCaseMenu = false }
-                            ) {
+                            onExpandedChange = { expandedCaseMenu = it },
+                            anchor = { modifier ->
+                                EnhancedTextField(
+                                    modifier = modifier.fillMaxWidth(),
+                                    value = selectedCase?.let { "${it.caseNumber} - ${it.clientName}" }
+                                        ?: "اختر القضية",
+                                    onValueChange = {},
+                                    label = { Text("القضية المرتبطة") },
+                                    readOnly = true,
+                                    trailingIcon = {
+                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCaseMenu)
+                                    },
+                                )
+                            },
+                            content = {
                                 if (cases.isEmpty()) {
                                     DropdownMenuItem(
                                         text = { Text("لا توجد قضايا متاحة") },
@@ -181,7 +177,7 @@ fun AddEditSessionScreen(
                                     }
                                 }
                             }
-                        }
+                        )
 
                         // --- Session Date ---
                         EnhancedTextField(
@@ -208,13 +204,12 @@ fun AddEditSessionScreen(
                         )
 
                         // --- Session Time ---
-                        ExposedDropdownMenuBox(
+                        AppExposedDropdownMenuBox(
                             expanded = showTimePicker,
-                            onExpandedChange = { showTimePicker = it }
-                        ) {
+                            onExpandedChange = { showTimePicker = it },
+                            anchor = { modifier ->
                             EnhancedTextField(
-                                modifier = Modifier
-                                    .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true)
+                                modifier = modifier
                                     .fillMaxWidth(),
                                 value = sessionTime.ifBlank { "" },
                                 onValueChange = {},
@@ -231,12 +226,9 @@ fun AddEditSessionScreen(
                                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = showTimePicker)
                                 }
                             )
-
-                            val timeOptions = listOf("صباحًا", "مساءً")
-                            AppExposedDropdownMenu(
-                                expanded = showTimePicker,
-                                onDismissRequest = { showTimePicker = false }
-                            ) {
+                            },
+                            content = {
+                                val timeOptions = listOf("صباحًا", "مساءً")
                                 timeOptions.forEach { option ->
                                     DropdownMenuItem(
                                         text = { Text(option) },
@@ -248,7 +240,7 @@ fun AddEditSessionScreen(
                                     )
                                 }
                             }
-                        }
+                        )
 // --- Reason ---
                         EnhancedTextField(
                             modifier = Modifier.fillMaxWidth(),

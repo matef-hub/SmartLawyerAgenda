@@ -1,7 +1,7 @@
 [versions]
 agp = "8.13.0"
 datetime = "0.9.0"
-foundationVersion = "1.9.1"
+compose-foundation = "1.9.2"
 google_api_client_android = "2.8.1"
 google_api_services_drive = "v3-rev20220815-2.0.0"
 googleAuthLibraryOauth2Http = "1.39.1"
@@ -9,6 +9,7 @@ gson = "2.13.2"
 kotlin = "2.2.20"
 ksp = "2.2.20-2.0.3"
 material3Datetime = "1.1.2"
+material3Version = "1.4.0"
 room = "2.7.2"
 firebase_auth = "23.2.1"
 navigation = "2.9.3"
@@ -26,22 +27,23 @@ kotlinx_coroutines_android = "1.10.2"
 kotlinx_datetime = "0.7.1"
 lifecycle_runtime_ktx = "2.9.4"
 activity_compose = "1.11.0"
-compose_bom = "2025.09.00"
-navigation_compose = "2.9.4"
+compose_bom = "2025.09.01"
+navigation_compose = "2.9.5"
 play_services_auth = "21.4.0"
 credential_manager = "1.5.0"
-room_runtime = "2.8.0"
-uiVersion = "1.9.1"
+room_runtime = "2.8.1"
+uiVersion = "1.9.2"
+androidxFoundation = "1.9.2"
 
 [libraries]
+androidx-compose-material3-v121 = { module = "androidx.compose.material3:material3", version.ref = "material3Version" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core_ktx" }
-androidx-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "foundationVersion" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle_runtime_ktx" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle_runtime_ktx" }
 androidx-material3-datetime = { module = "androidx.compose.material3:material3-datetime", version.ref = "material3Datetime" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigation_compose" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room_runtime" }
-androidx-room-paging = { module = "androidx.room:room-paging", version = "2.8.0" }
+androidx-room-paging = { module = "androidx.room:room-paging", version = "2.8.1" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room_runtime" }
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room_runtime" }
 datetime = { module = "io.github.vanpra.compose-material-dialogs:datetime", version.ref = "datetime" }
@@ -59,7 +61,7 @@ androidx-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
-androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest", version = "1.9.1" }
+androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest", version = "1.9.2" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx_coroutines_android" }
@@ -67,10 +69,11 @@ kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.
 play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "play_services_auth" }
 credential-manager = { module = "androidx.credentials:credentials", version.ref = "credential_manager" }
 credential-manager-play-services-auth = { module = "com.google.android.libraries.identity.googleid:googleid", version = "1.1.1" }
-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 compose-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
 compose-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 ui = { group = "androidx.compose.ui", name = "ui", version.ref = "uiVersion" }
+androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "compose-foundation" }
+
 
 
 [plugins]

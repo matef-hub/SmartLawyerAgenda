@@ -3,7 +3,6 @@ package com.example.smartlawyeragenda.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -19,6 +18,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.smartlawyeragenda.data.entities.CaseEntity
+import com.example.smartlawyeragenda.ui.components.EnhancedTextField
+import com.example.smartlawyeragenda.ui.components.AppExposedDropdownMenu
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -202,9 +203,8 @@ private fun CaseInputCard(
     minLines: Int = 1,
     maxLines: Int = 1
 ) {
-    OutlinedTextField(
+    EnhancedTextField(
         value = value,
-        shape = RoundedCornerShape(20.dp),
         onValueChange = onValueChange,
         label = { Text(label) },
         modifier = Modifier.fillMaxWidth(),
@@ -254,11 +254,10 @@ fun CaseTypeDropdown(
         onExpandedChange = { expanded = !expanded },
         modifier = modifier.fillMaxWidth()
     ) {
-        OutlinedTextField(
+        EnhancedTextField(
             value = selectedType,
             onValueChange = {},
             readOnly = true,
-            shape = RoundedCornerShape(20.dp),
             label = { Text("نوع الدعوى") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
@@ -266,7 +265,7 @@ fun CaseTypeDropdown(
                 .fillMaxWidth()
         )
 
-        ExposedDropdownMenu(
+        AppExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {

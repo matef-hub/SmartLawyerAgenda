@@ -2,6 +2,7 @@ package com.example.smartlawyeragenda.ui.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
@@ -226,6 +227,10 @@ object AppTypography {
     )
 }
 
+val CustomShapes = Shapes(
+    medium = RoundedCornerShape(24.dp)
+)
+
 // ==================== SPACING ====================
 
 object AppSpacing {
@@ -360,3 +365,5 @@ val AppGradient = listOf(
     AppColors.GradientStart,
     AppColors.GradientEnd
 )
+// ==================== Text Filed style ====================
+

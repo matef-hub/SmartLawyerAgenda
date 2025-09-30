@@ -73,7 +73,7 @@ fun CustomDateFilterDropdown(
                 .fillMaxWidth()
         )
 
-        ExposedDropdownMenu(
+        AppExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {

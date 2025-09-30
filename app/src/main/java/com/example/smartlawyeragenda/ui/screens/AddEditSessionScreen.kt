@@ -24,6 +24,8 @@ import androidx.navigation.compose.rememberNavController
 import com.example.smartlawyeragenda.data.entities.CaseEntity
 import com.example.smartlawyeragenda.data.entities.SessionEntity
 import com.example.smartlawyeragenda.data.entities.SessionStatus
+import com.example.smartlawyeragenda.ui.components.EnhancedTextField
+import com.example.smartlawyeragenda.ui.components.AppExposedDropdownMenu
 import com.example.smartlawyeragenda.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -143,7 +145,10 @@ fun AddEditSessionScreen(
                             expanded = expandedCaseMenu,
                             onExpandedChange = { expandedCaseMenu = it }
                         ) {
-                            OutlinedTextField(
+                            EnhancedTextField(
+                                modifier = Modifier
+                                    .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true)
+                                    .fillMaxWidth(),
                                 value = selectedCase?.let { "${it.caseNumber} - ${it.clientName}" }
                                     ?: "اختر القضية",
                                 onValueChange = {},
@@ -152,12 +157,8 @@ fun AddEditSessionScreen(
                                 trailingIcon = {
                                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCaseMenu)
                                 },
-                                colors = OutlinedTextFieldDefaults.colors(),
-                                modifier = Modifier
-                                    .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true)
-                                    .fillMaxWidth()
                             )
-                            ExposedDropdownMenu(
+                            AppExposedDropdownMenu(
                                 expanded = expandedCaseMenu,
                                 onDismissRequest = { expandedCaseMenu = false }
                             ) {
@@ -183,7 +184,8 @@ fun AddEditSessionScreen(
                         }
 
                         // --- Session Date ---
-                        OutlinedTextField(
+                        EnhancedTextField(
+                            modifier = Modifier.fillMaxWidth(),
                             value = sessionDate.ifBlank { "" },
                             onValueChange = {},
                             label = { Text("تاريخ الجلسة") },
@@ -194,6 +196,7 @@ fun AddEditSessionScreen(
                                     contentDescription = null
                                 )
                             },
+                            readOnly = true,
                             trailingIcon = {
                                 IconButton(onClick = { showDatePicker = true }) {
                                     Icon(
@@ -201,9 +204,7 @@ fun AddEditSessionScreen(
                                         contentDescription = "اختر تاريخ"
                                     )
                                 }
-                            },
-                            readOnly = true,
-                            modifier = Modifier.fillMaxWidth()
+                            }
                         )
 
                         // --- Session Time ---
@@ -211,7 +212,10 @@ fun AddEditSessionScreen(
                             expanded = showTimePicker,
                             onExpandedChange = { showTimePicker = it }
                         ) {
-                            OutlinedTextField(
+                            EnhancedTextField(
+                                modifier = Modifier
+                                    .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true)
+                                    .fillMaxWidth(),
                                 value = sessionTime.ifBlank { "" },
                                 onValueChange = {},
                                 label = { Text("وقت الجلسة") },
@@ -222,17 +226,14 @@ fun AddEditSessionScreen(
                                         contentDescription = null
                                     )
                                 },
+                                readOnly = true,
                                 trailingIcon = {
                                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = showTimePicker)
-                                },
-                                readOnly = true,
-                                modifier = Modifier
-                                    .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true)
-                                    .fillMaxWidth()
+                                }
                             )
 
                             val timeOptions = listOf("صباحًا", "مساءً")
-                            ExposedDropdownMenu(
+                            AppExposedDropdownMenu(
                                 expanded = showTimePicker,
                                 onDismissRequest = { showTimePicker = false }
                             ) {
@@ -249,27 +250,28 @@ fun AddEditSessionScreen(
                             }
                         }
 // --- Reason ---
-                        OutlinedTextField(
+                        EnhancedTextField(
+                            modifier = Modifier.fillMaxWidth(),
                             value = sessionReason,
                             onValueChange = { sessionReason = it },
                             label = { Text("سبب التأجيل") },
                             placeholder = { Text("أدخل سبب التأجيل إن وجد") },
-                            leadingIcon = { Icon(Icons.Default.Info, contentDescription = null) },
-                            modifier = Modifier.fillMaxWidth()
+                            leadingIcon = { Icon(Icons.Default.Info, contentDescription = null) }
                         )
 
 // --- Decision ---
-                        OutlinedTextField(
+                        EnhancedTextField(
+                            modifier = Modifier.fillMaxWidth(),
                             value = sessionDecision,
                             onValueChange = { sessionDecision = it },
                             label = { Text("القرار") },
                             placeholder = { Text("أدخل قرار المحكمة") },
-                            leadingIcon = { Icon(Icons.Default.Gavel, contentDescription = null) },
-                            modifier = Modifier.fillMaxWidth()
+                            leadingIcon = { Icon(Icons.Default.Gavel, contentDescription = null) }
                         )
 
                         // --- Notes ---
-                        OutlinedTextField(
+                        EnhancedTextField(
+                            modifier = Modifier.fillMaxWidth(),
                             value = sessionNotes,
                             onValueChange = { sessionNotes = it },
                             label = { Text("ملاحظات") },
@@ -281,8 +283,7 @@ fun AddEditSessionScreen(
                                 )
                             },
                             minLines = 3,
-                            maxLines = 5,
-                            modifier = Modifier.fillMaxWidth()
+                            maxLines = 5
                         )
 
                         Spacer(Modifier.height(AppSpacing.Large))
@@ -383,3 +384,4 @@ fun AddEditSessionScreenPreview() {
         )
     }
 }
+

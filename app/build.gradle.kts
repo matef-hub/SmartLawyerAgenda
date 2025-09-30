@@ -84,6 +84,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.compose.material3.v121)
     implementation(libs.compose.icons.core)
     implementation(libs.compose.icons.extended)
 
@@ -98,6 +99,7 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.paging)
+    implementation(libs.androidx.compose.foundation)
     ksp(libs.androidx.room.compiler)
 
     // Coroutines
@@ -118,7 +120,6 @@ dependencies {
 
     // Date/Time
     implementation(libs.kotlinx.datetime)
-    implementation(libs.androidx.foundation)
 
     // Testing
     testImplementation(libs.junit)

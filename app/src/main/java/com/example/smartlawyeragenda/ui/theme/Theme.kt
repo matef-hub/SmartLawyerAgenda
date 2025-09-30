@@ -80,6 +80,7 @@ fun SmartLawyerAgendaTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
+        shapes = CustomShapes,
         content = {
             // Force RTL layout for Arabic language
             androidx.compose.runtime.CompositionLocalProvider(

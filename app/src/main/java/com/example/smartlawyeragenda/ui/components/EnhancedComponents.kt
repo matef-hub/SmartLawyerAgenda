@@ -30,6 +30,7 @@ import com.example.smartlawyeragenda.viewmodel.SessionWithCase
 import com.example.smartlawyeragenda.repository.OverallStatistics
 import com.example.smartlawyeragenda.repository.CaseStatistics
 import com.example.smartlawyeragenda.ui.screens.StatisticItem
+import com.example.smartlawyeragenda.ui.theme.AppColors
 import java.util.Calendar
 import java.text.SimpleDateFormat
 import java.util.*
@@ -236,47 +237,56 @@ fun FilterChip(
 
 @Composable
 fun EnhancedTextField(
+    modifier: Modifier = Modifier,
     value: String,
     onValueChange: (String) -> Unit,
-    label: String,
-    modifier: Modifier = Modifier,
-    placeholder: String = "",
-    leadingIcon: ImageVector? = null,
-    trailingIcon: ImageVector? = null,
+    label: @Composable (() -> Unit)? = null,
+    placeholder: @Composable () -> Unit = {},
+    leadingIcon: @Composable (() -> Unit)? = null,
     onTrailingIconClick: (() -> Unit)? = null,
     isError: Boolean = false,
     errorMessage: String? = null,
     enabled: Boolean = true,
-    singleLine: Boolean = true
+    singleLine: Boolean = true,
+    readOnly: Boolean = false,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    minLines: Int = 1,
+    maxLines: Int = Int.MAX_VALUE,
+    colors: TextFieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = AppColors.Primary,
+        unfocusedBorderColor = AppColors.Neutral300,
+        errorBorderColor = AppColors.Error
+    )
 ) {
     Column(modifier = modifier) {
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text(label) },
-            placeholder = { Text(placeholder) },
-            leadingIcon = leadingIcon?.let { icon ->
-                { Icon(imageVector = icon, contentDescription = null) }
-            },
-            trailingIcon = trailingIcon?.let { icon ->
-                { 
-                    IconButton(onClick = { onTrailingIconClick?.invoke() }) {
-                        Icon(imageVector = icon, contentDescription = null)
+            label = label,
+            placeholder = placeholder,
+            leadingIcon = leadingIcon,
+            trailingIcon = {
+                if (trailingIcon != null) {
+                    if (onTrailingIconClick != null) {
+                        IconButton(onClick = onTrailingIconClick) {
+                            trailingIcon()
+                        }
+                    } else {
+                        trailingIcon()
                     }
                 }
             },
+            readOnly = readOnly,
+            modifier = Modifier.fillMaxWidth(),
             isError = isError,
             enabled = enabled,
             singleLine = singleLine,
-            shape = RoundedCornerShape(AppCornerRadius.Medium),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = AppColors.Primary,
-                unfocusedBorderColor = AppColors.Neutral300,
-                errorBorderColor = AppColors.Error
-            )
+            minLines = minLines,
+            maxLines = maxLines,
+            shape = RoundedCornerShape(AppCornerRadius.Round),
+            colors = colors
         )
-        
+
         if (isError && errorMessage != null) {
             Text(
                 text = errorMessage,
@@ -287,6 +297,7 @@ fun EnhancedTextField(
         }
     }
 }
+
 
 // ==================== ENHANCED LISTS ====================
 
@@ -1002,3 +1013,24 @@ fun StatisticChip(
         modifier = modifier
     )
 }
+
+@Composable
+fun AppExposedDropdownMenu(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest,
+        modifier = modifier
+            .heightIn(max = 250.dp)
+            .clip(RoundedCornerShape(12))
+            .background(AppColors.SurfaceVariant),
+        content = content
+    )
+}
+
+
+

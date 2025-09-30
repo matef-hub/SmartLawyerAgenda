@@ -33,6 +33,7 @@ import com.example.smartlawyeragenda.viewmodel.AgendaUiState
 import com.example.smartlawyeragenda.viewmodel.SessionWithCase
 import com.example.smartlawyeragenda.ui.components.*
 import com.example.smartlawyeragenda.ui.components.DateFilter
+import com.example.smartlawyeragenda.ui.theme.AppColors
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,12 +94,8 @@ fun AgendaScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent
-                    ),
-                    modifier = Modifier.background(
-                        brush = Brush.horizontalGradient(
-                            listOf(Color(0xFF1565C0), Color(0xFF42A5F5))
-                        )
+                        containerColor = AppColors.Primary,
+                        titleContentColor = AppColors.OnPrimary
                     )
                 )
             },
@@ -290,7 +287,7 @@ fun DateHeader(uiState: AgendaUiState) {
             modifier = Modifier
                 .background(
                     Brush.horizontalGradient(
-                        listOf(Color(0xFF1565C0), Color(0xFF42A5F5))
+                        listOf(Color(0xFF1E3A8A), Color(0xFF0D47A1))
                     )
                 )
                 .padding(20.dp)

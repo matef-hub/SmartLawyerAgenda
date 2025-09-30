@@ -20,6 +20,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.smartlawyeragenda.data.entities.CaseEntity
 import com.example.smartlawyeragenda.ui.components.EnhancedTextField
 import com.example.smartlawyeragenda.ui.components.AppExposedDropdownMenu
+import com.example.smartlawyeragenda.ui.theme.AppColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,12 +82,8 @@ fun AddCaseScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                ),
-                modifier = Modifier.background(
-                    brush = Brush.horizontalGradient(
-                        listOf(Color(0xFF1565C0), Color(0xFF42A5F5))
-                    )
+                    containerColor = AppColors.Primary,
+                    titleContentColor = AppColors.OnPrimary
                 )
             )
         }
@@ -178,8 +175,9 @@ fun AddCaseScreen(
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 enabled = !isLoading,
-                colors = ButtonDefaults.elevatedButtonColors(containerColor = Color(0xFF1565C0))
-            ) {
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AppColors.Primary
+                )            ) {
                 if (isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),

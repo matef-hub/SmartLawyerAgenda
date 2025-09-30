@@ -58,7 +58,7 @@ class NotificationHelper(private val context: Context) {
         )
         
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.mipmap.ic_launcher_foreground)
             .setContentTitle("تذكير بجلسة قادمة")
             .setContentText("جلسة رقم $caseNumber - $clientName")
             .setStyle(NotificationCompat.BigTextStyle()
@@ -85,7 +85,7 @@ class NotificationHelper(private val context: Context) {
         )
         
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.mipmap.ic_launcher_foreground)
             .setContentTitle("تذكير يومي")
             .setContentText("لديك $sessionsCount جلسة اليوم")
             .setStyle(NotificationCompat.BigTextStyle()

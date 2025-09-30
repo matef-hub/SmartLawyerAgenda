@@ -376,7 +376,7 @@ fun SettingsScreen(
                         )
 
                         Text(
-                            text = "الإصدار 1.0",
+                            text = "الإصدار الأول - بواسطة الاستاذ / محمد عاطف",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

@@ -34,6 +34,8 @@ import com.example.smartlawyeragenda.viewmodel.SessionWithCase
 import com.example.smartlawyeragenda.ui.components.*
 import com.example.smartlawyeragenda.ui.components.DateFilter
 import com.example.smartlawyeragenda.ui.theme.AppColors
+import com.example.smartlawyeragenda.ui.theme.TypographyUtils
+
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,14 +71,16 @@ fun AgendaScreen(
                         Column {
                             Text(
                                 text = "أجندة المحامي الذكية",
-                                style = MaterialTheme.typography.titleLarge.copy(
+                                style = TypographyUtils.withAmiriFont(
+                                    MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
                                 )
                             )
                             Text(
                                 text = "إدارة الجلسات والقضايا",
-                                style = MaterialTheme.typography.bodySmall.copy(
+                                style = TypographyUtils.withAmiriFont(
+                                    MaterialTheme.typography.bodySmall,
                                     color = Color.White.copy(alpha = 0.8f)
                                 )
                             )
@@ -321,7 +325,10 @@ fun DateHeader(uiState: AgendaUiState) {
                     Text(
                         uiState.gregorianDate,
                         color = Color.White,
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+                        style = TypographyUtils.withAmiriFont(
+                            MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     )
                     Text(
                         uiState.hijriDate,
@@ -335,7 +342,10 @@ fun DateHeader(uiState: AgendaUiState) {
                     Text(
                         "عدد الجلسات: ${uiState.sessions.size}",
                         color = Color.Yellow,
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                        style = TypographyUtils.withAmiriFont(
+                            MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold
+                        )
                     )
 
                     if (uiState.sessions.isNotEmpty()) {
@@ -366,7 +376,10 @@ fun DateHeader(uiState: AgendaUiState) {
                     Text(
                         "النتائج الموجودة: ${uiState.sessions.size}",
                         color = Color.Yellow,
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                        style = TypographyUtils.withAmiriFont(
+                            MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold
+                        )
                     )
                 }
 

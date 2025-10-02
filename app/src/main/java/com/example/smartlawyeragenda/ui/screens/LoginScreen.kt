@@ -162,7 +162,7 @@ fun LoginScreen(
             // App title with enhanced typography
             Text(
                 text = stringResource(R.string.app_name),
-                style = AppTypography.DisplaySmall,
+                style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
                 color = AppColors.Primary,
                 textAlign = TextAlign.Center,
@@ -176,10 +176,10 @@ fun LoginScreen(
             // Subtitle with better styling
             Text(
                 text = stringResource(R.string.login_subtitle),
-                style = AppTypography.TitleMedium,
+                style = MaterialTheme.typography.titleMedium,
                 color = AppColors.OnSurfaceVariant,
                 textAlign = TextAlign.Center,
-                lineHeight = AppTypography.TitleMedium.lineHeight,
+                lineHeight = MaterialTheme.typography.titleMedium.lineHeight,
                 modifier = Modifier
                     .alpha(alphaAnimation.value)
                     .scale(scaleAnimation.value)
@@ -233,7 +233,7 @@ fun LoginScreen(
                     
                     Text(
                         text = "تسجيل الدخول مطلوب للوصول إلى النسخ الاحتياطية على Google Drive",
-                        style = AppTypography.BodyMedium,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = AppColors.OnSurfaceVariant,
                         textAlign = TextAlign.Center
                     )

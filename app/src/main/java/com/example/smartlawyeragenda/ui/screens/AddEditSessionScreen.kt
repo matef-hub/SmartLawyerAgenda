@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -27,6 +26,7 @@ import com.example.smartlawyeragenda.data.entities.SessionStatus
 import com.example.smartlawyeragenda.ui.components.EnhancedTextField
 import com.example.smartlawyeragenda.ui.components.AppExposedDropdownMenuBox
 import com.example.smartlawyeragenda.ui.theme.*
+import com.example.smartlawyeragenda.ui.theme.TypographyUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -98,8 +98,7 @@ fun AddEditSessionScreen(
                     title = {
                         Text(
                             text = if (existingSession == null) "إضافة جلسة" else "تعديل جلسة",
-                            style = AppTypography.HeadlineSmall,
-                            fontWeight = FontWeight.Bold
+                            style = TypographyUtils.bold(MaterialTheme.typography.headlineSmall)
                         )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -135,7 +134,7 @@ fun AddEditSessionScreen(
                             Text(
                                 text = error,
                                 color = MaterialTheme.colorScheme.error,
-                                style = AppTypography.BodyMedium,
+                                style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.padding(bottom = 8.dp)
                             )
                         }
@@ -365,8 +364,8 @@ fun AddEditSessionScreen(
 @Composable
 fun AddEditSessionScreenPreview() {
     val sampleCases = listOf(
-        CaseEntity(1, "123", "10", "أحمد", "محمد", System.currentTimeMillis(), "وصف تجريبي"),
-        CaseEntity(2, "124", "11", "سارة", "شركة X", System.currentTimeMillis(), "وصف آخر")
+        CaseEntity(1, "123", "10", "أحمد", "محمد", System.currentTimeMillis().toString(), "وصف تجريبي"),
+        CaseEntity(2, "124", "11", "سارة", "شركة X", System.currentTimeMillis().toString(), "وصف آخر")
     )
     MaterialTheme {
         AddEditSessionScreen(

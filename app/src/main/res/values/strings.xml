@@ -1,23 +1,23 @@
 <resources>
     <string name="app_name">الأجندة القضائية </string>
-    
+
     <!-- Main Navigation -->
     <string name="agenda">الأجندة</string>
     <string name="settings">الإعدادات</string>
-    
+
     <!-- Login Screen -->
     <string name="login_title">تسجيل الدخول</string>
     <string name="login_subtitle">سجل دخولك باستخدام حساب Google للوصول إلى النسخ الاحتياطية</string>
     <string name="sign_in_with_google">تسجيل الدخول بـ Google</string>
     <string name="login_success">تم تسجيل الدخول بنجاح</string>
     <string name="login_failed">فشل في تسجيل الدخول</string>
-    
+
     <!-- Agenda Screen -->
     <string name="today">اليوم</string>
     <string name="add_session">إضافة جلسة جديدة</string>
     <string name="no_sessions_today">لا توجد جلسات اليوم</string>
     <string name="sessions_count">عدد الجلسات: %d</string>
-    
+
     <!-- Session Form -->
     <string name="case_number">رقم القضية</string>
     <string name="roll_number">رقم اللفة</string>
@@ -30,8 +30,7 @@
     <string name="next_session_date">تاريخ الجلسة التالية</string>
     <string name="save_session">حفظ الجلسة</string>
     <string name="update_session">تحديث الجلسة</string>
-    <string name="delete_session">حذف الجلسة</string>
-    
+
     <!-- Session Card -->
     <string name="case_number_label">رقم القضية: %s</string>
     <string name="roll_number_label">رقم اللفة: %s</string>
@@ -41,7 +40,7 @@
     <string name="from_session_label">من جلسة: %s</string>
     <string name="reason_label">السبب: %s</string>
     <string name="decision_label">القرار: %s</string>
-    
+
     <!-- Settings Screen -->
     <string name="backup_to_drive">نسخ احتياطي إلى Google Drive</string>
     <string name="restore_from_drive">استعادة من Google Drive</string>
@@ -50,7 +49,7 @@
     <string name="restore_success">تم استعادة البيانات بنجاح</string>
     <string name="restore_failed">فشل في استعادة البيانات</string>
     <string name="no_backup_found">لا توجد نسخ احتياطية</string>
-    
+
     <!-- Common -->
     <string name="save">حفظ</string>
     <string name="cancel">إلغاء</string>
@@ -62,12 +61,12 @@
     <string name="loading">جاري التحميل...</string>
     <string name="required_field">هذا الحقل مطلوب</string>
     <string name="invalid_date">تاريخ غير صحيح</string>
-    
+
     <!-- Date Format -->
     <string name="date_format">yyyy/MM/dd</string>
     <string name="time_format">HH:mm</string>
     <string name="date_time_format">yyyy/MM/dd HH:mm</string>
-    
+
     <!-- Hijri -->
     <string name="hijri_date">التاريخ الهجري: %s</string>
     <string name="gregorian_date">التاريخ الميلادي: %s</string>
@@ -86,8 +85,75 @@
     <string name="statistics">الإحصائيات</string>
     <string name="case_management">إدارة القضايا</string>
 
+    <!-- Role Labels -->
+    <string name="client_role">صفة الموكل</string>
+    <string name="opponent_role">صفة الخصم</string>
+    <string name="select_role">اختر الصفة</string>
+    <string name="add_custom_role">إضافة صفة مخصصة</string>
+    <string name="edit_role">تعديل الصفة</string>
+    <string name="role_not_specified">غير محدد</string>
+
     <!-- Messages -->
     <string name="loading_cases">جاري تحميل القضايا...</string>
     <string name="no_active_cases">لا توجد قضايا نشطة</string>
     <string name="search_results">نتائج البحث</string>
+    <string name="loading_sessions">جاري تحميل الجلسات...</string>
+    <string name="no_search_results">لا توجد نتائج مطابقة</string>
+    <string name="please_fill_required_fields">يرجى ملء الحقول المطلوبة</string>
+    <string name="try_different_search">جرّب كلمات بحث مختلفة</string>
+    <string name="add_new_session">اضغط على زر الإضافة لإضافة جلسة جديدة</string>
+    <string name="search_placeholder">ابحث في الجلسات والقضايا...</string>
+    <string name="results_found">النتائج الموجودة: %d</string>
+
+    <!-- UI Labels -->
+    <string name="role_label">صفة: %s</string>
+    <string name="date_label">التاريخ: %s</string>
+    <string name="time_label">الوقت: %s</string>
+    <string name="notes_label">ملاحظات: %s</string>
+    <string name="type_label">النوع: %s</string>
+    <string name="description_label">الوصف: %s</string>
+    <string name="creation_date_label">تاريخ الإنشاء: %s</string>
+    <string name="case_status">حالة القضية</string>
+    <string name="active">نشطة</string>
+    <string name="inactive">غير نشطة</string>
+    <string name="closed">مغلقة</string>
+    <string name="sessions_label">جلسات</string>
+    <string name="upcoming_label">قادمة</string>
+    <string name="statistics_label">الإحصائيات</string>
+    <string name="total_cases">القضايا الإجمالية</string>
+    <string name="completed_sessions">الجلسات المكتملة</string>
+    <string name="upcoming_sessions">الجلسات القادمة</string>
+    <string name="active_cases">القضايا النشطة</string>
+
+    <!-- Actions -->
+    <string name="edit_session">تعديل الجلسة</string>
+    <string name="delete_session">حذف الجلسة</string>
+    <string name="edit_case">تعديل القضية</string>
+    <string name="delete_case">حذف القضية</string>
+    <string name="close_case">إغلاق القضية</string>
+    <string name="activate_case">تفعيل القضية</string>
+    <string name="search">بحث</string>
+    <string name="clear">مسح</string>
+    <string name="add">إضافة</string>
+    <string name="back">رجوع</string>
+    <string name="save_changes">حفظ التعديلات</string>
+    <string name="save_case">حفظ القضية</string>
+    <string name="enter_custom_role">أدخل الصفة المخصصة:</string>
+    <string name="role">الصفة</string>
+
+    <!-- Predefined Role Options -->
+    <string-array name="predefined_roles">
+        <item>مدعي</item>
+        <item>مدعى عليه</item>
+        <item>شاهد</item>
+        <item>خبير</item>
+        <item>وكيل</item>
+        <item>محامي</item>
+        <item>مستشار قانوني</item>
+        <item>نائب عام</item>
+        <item>قاضي</item>
+        <item>كاتب عدل</item>
+        <item>مترجم</item>
+        <item>أخرى</item>
+    </string-array>
 </resources>

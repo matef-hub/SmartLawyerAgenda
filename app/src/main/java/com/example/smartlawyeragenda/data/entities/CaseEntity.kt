@@ -3,14 +3,15 @@ package com.example.smartlawyeragenda.data.entities
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import java.time.Instant
 
 @Entity(
     tableName = "cases",
     indices = [
         Index(value = ["caseNumber"], unique = true),
         Index(value = ["clientName"]),
-        Index(value = ["createdAt"])
+        Index(value = ["createdAt"]),
+        Index(value = ["clientRole"]),
+        Index(value = ["opponentRole"])
     ]
 )
 data class CaseEntity(
@@ -20,6 +21,8 @@ data class CaseEntity(
     val rollNumber: String? = null,
     val clientName: String,
     val opponentName: String? = null,
+    val clientRole: String? = null,
+    val opponentRole: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val caseType: String? = null,
     val caseDescription: String? = null,
@@ -32,4 +35,8 @@ data class CaseEntity(
     fun getOpponentDisplay(): String = opponentName?.takeIf { it.isNotBlank() } ?: "غير محدد"
 
     fun getRollDisplay(): String = rollNumber?.takeIf { it.isNotBlank() } ?: "غير محدد"
+
+    fun getClientRoleDisplay(): String = clientRole?.takeIf { it.isNotBlank() } ?: "غير محدد"
+
+    fun getOpponentRoleDisplay(): String = opponentRole?.takeIf { it.isNotBlank() } ?: "غير محدد"
 }

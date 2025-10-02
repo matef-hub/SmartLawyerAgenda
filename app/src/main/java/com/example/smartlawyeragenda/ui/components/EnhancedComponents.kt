@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -31,12 +32,16 @@ import com.example.smartlawyeragenda.repository.OverallStatistics
 import com.example.smartlawyeragenda.repository.CaseStatistics
 import com.example.smartlawyeragenda.ui.screens.StatisticItem
 import com.example.smartlawyeragenda.ui.theme.AppColors
+import com.example.smartlawyeragenda.R
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.ui.platform.LocalContext
 import java.util.Calendar
 import java.text.SimpleDateFormat
 import java.util.*
+
+
 
 /**
  * Enhanced UI Components for Professional App Design
@@ -141,7 +146,7 @@ fun EnhancedButton(
             }
             Text(
                 text = text,
-                style = AppTypography.LabelLarge,
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Medium
             )
         }
@@ -199,7 +204,7 @@ fun StatusChip(
         label = {
             Text(
                 text = if (count != null) "$text ($count)" else text,
-                style = AppTypography.LabelMedium,
+                style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Medium
             )
         },
@@ -223,7 +228,7 @@ fun FilterChip(
         label = {
             Text(
                 text = text,
-                style = AppTypography.LabelMedium,
+                style = MaterialTheme.typography.labelMedium,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
             )
         },
@@ -255,6 +260,7 @@ fun EnhancedTextField(
     trailingIcon: @Composable (() -> Unit)? = null,
     minLines: Int = 1,
     maxLines: Int = Int.MAX_VALUE,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     colors: TextFieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = AppColors.Primary,
         unfocusedBorderColor = AppColors.Neutral300,
@@ -286,6 +292,7 @@ fun EnhancedTextField(
             singleLine = singleLine,
             minLines = minLines,
             maxLines = maxLines,
+            keyboardOptions = keyboardOptions,
             shape = RoundedCornerShape(AppCornerRadius.Round),
             colors = colors
         )
@@ -294,7 +301,7 @@ fun EnhancedTextField(
             Text(
                 text = errorMessage,
                 color = AppColors.Error,
-                style = AppTypography.BodySmall,
+                style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = AppSpacing.ExtraSmall)
             )
         }
@@ -340,7 +347,7 @@ fun ListItem(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = AppTypography.TitleMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -348,7 +355,7 @@ fun ListItem(
                 if (subtitle != null) {
                     Text(
                         text = subtitle,
-                        style = AppTypography.BodyMedium,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = AppColors.OnSurfaceVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
@@ -388,7 +395,7 @@ fun LoadingIndicator(
         Spacer(modifier = Modifier.height(AppSpacing.Medium))
         Text(
             text = message,
-            style = AppTypography.BodyLarge,
+            style = MaterialTheme.typography.bodyLarge,
             color = AppColors.OnSurfaceVariant,
             textAlign = TextAlign.Center
         )
@@ -446,7 +453,7 @@ fun Badge(
         Text(
             text = text,
             color = AppColors.OnPrimary,
-            style = AppTypography.LabelSmall,
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold
         )
     }
@@ -480,7 +487,7 @@ fun EnhancedSessionCard(
             ) {
                 Text(
                     text = "قضية رقم: ${case.caseNumber}",
-                    style = AppTypography.TitleMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = AppColors.Primary
                 )
@@ -498,20 +505,37 @@ fun EnhancedSessionCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = "الموكل: ${case.clientName}",
-                    style = AppTypography.BodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.weight(1f)
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "الموكل: ${case.clientName}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    if (!case.clientRole.isNullOrBlank()) {
+                        Text(
+                            text = "صفة: ${case.clientRole}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.OnSurfaceVariant
+                        )
+                    }
+                }
                 
-                Text(
-                    text = "الخصم: ${case.opponentName}",
-                    style = AppTypography.BodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.weight(1f)
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "الخصم: ${case.opponentName}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.End
+                    )
+                    if (!case.opponentRole.isNullOrBlank()) {
+                        Text(
+                            text = "صفة: ${case.opponentRole}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.OnSurfaceVariant,
+                            textAlign = TextAlign.End
+                        )
+                    }
+                }
             }
             
             Spacer(modifier = Modifier.height(AppSpacing.Small))
@@ -525,13 +549,13 @@ fun EnhancedSessionCard(
                     text = "التاريخ: ${SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(
                         Date(session.sessionDate)
                     )}",
-                    style = AppTypography.BodySmall,
+                    style = MaterialTheme.typography.bodySmall,
                     color = AppColors.OnSurfaceVariant
                 )
                 
                 Text(
                     text = "الوقت: ${session.sessionTime}",
-                    style = AppTypography.BodySmall,
+                    style = MaterialTheme.typography.bodySmall,
                     color = AppColors.OnSurfaceVariant
                 )
             }
@@ -541,7 +565,7 @@ fun EnhancedSessionCard(
                 Spacer(modifier = Modifier.height(AppSpacing.Small))
                 Text(
                     text = "ملاحظات: ${session.notes}",
-                    style = AppTypography.BodySmall,
+                    style = MaterialTheme.typography.bodySmall,
                     color = AppColors.OnSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -679,7 +703,7 @@ fun EnhancedStatisticsCard(
         ) {
             Text(
                 text = "الإحصائيات",
-                style = AppTypography.TitleMedium,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = AppColors.Primary
             )
@@ -809,7 +833,7 @@ fun EnhancedCaseCard(
             ) {
                 Text(
                     text = "قضية رقم: ${case.caseNumber}",
-                    style = AppTypography.TitleMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = AppColors.Primary
                 )
@@ -830,7 +854,7 @@ fun EnhancedCaseCard(
                 case.caseType?.let { type ->
                     Text(
                         text = "النوع: $type",
-                        style = AppTypography.BodyMedium,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = AppColors.OnSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )
@@ -839,7 +863,7 @@ fun EnhancedCaseCard(
                 case.rollNumber?.let { rollNumber ->
                     Text(
                         text = "رقم الجدول: $rollNumber",
-                        style = AppTypography.BodyMedium,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = AppColors.OnSurfaceVariant,
                         textAlign = TextAlign.End,
                         modifier = Modifier.weight(1f)
@@ -857,22 +881,41 @@ fun EnhancedCaseCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "الموكل: ${case.clientName}",
-                        style = AppTypography.BodyMedium,
+                        style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    if (!case.clientRole.isNullOrBlank()) {
+                        Text(
+                            text = "صفة: ${case.clientRole}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.OnSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "الخصم: ${case.opponentName}",
-                        style = AppTypography.BodyMedium,
+                        style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         textAlign = TextAlign.End,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    if (!case.opponentRole.isNullOrBlank()) {
+                        Text(
+                            text = "صفة: ${case.opponentRole}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.OnSurfaceVariant,
+                            textAlign = TextAlign.End,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
 
@@ -881,7 +924,7 @@ fun EnhancedCaseCard(
                 Spacer(modifier = Modifier.height(AppSpacing.Small))
                 Text(
                     text = "الوصف: $description",
-                    style = AppTypography.BodySmall,
+                    style = MaterialTheme.typography.bodySmall,
                     color = AppColors.OnSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -899,7 +942,7 @@ fun EnhancedCaseCard(
             // Creation date
             Text(
                 text = "تاريخ الإنشاء: ${dateFormatter.format(Date(case.createdAt))}",
-                style = AppTypography.BodySmall,
+                style = MaterialTheme.typography.bodySmall,
                 color = AppColors.OnSurfaceVariant
             )
 
@@ -952,7 +995,7 @@ fun StatusBadge(
         label = {
             Text(
                 text = if (isActive) "نشطة" else "مغلقة",
-                style = AppTypography.LabelSmall
+                style = MaterialTheme.typography.labelSmall
             )
         },
         colors = AssistChipDefaults.assistChipColors(
@@ -1006,7 +1049,7 @@ fun StatisticChip(
         label = {
             Text(
                 text = "$label: $value",
-                style = AppTypography.LabelSmall
+                style = MaterialTheme.typography.labelSmall
             )
         },
         colors = AssistChipDefaults.assistChipColors(
@@ -1071,6 +1114,107 @@ fun AppExposedDropdownMenuBox(
                 .heightIn(max = 250.dp)
                 .background(AppColors.SurfaceVariant),
             content = content
+        )
+    }
+}
+
+// ==================== ROLE DROPDOWN COMPONENT ====================
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RoleDropdown(
+    selectedRole: String,
+    onRoleSelected: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    predefinedRoles: List<String> = listOf(
+        "مدعي", "مدعى عليه", "شاهد", "خبير", "وكيل", 
+        "محامي", "مستشار قانوني", "نائب عام", "قاضي", 
+        "كاتب عدل", "مترجم", "أخرى"
+    )
+) {
+    val context = LocalContext.current
+    var expanded by remember { mutableStateOf(false) }
+    var customRole by remember { mutableStateOf("") }
+    var showCustomDialog by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier.fillMaxWidth()
+    ) {
+        EnhancedTextField(
+            value = selectedRole.ifEmpty { context.getString(R.string.select_role) },
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
+            modifier = Modifier
+                .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
+                .fillMaxWidth()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            predefinedRoles.forEach { role ->
+                DropdownMenuItem(
+                    text = { Text(role) },
+                    onClick = {
+                        if (role == "أخرى") {
+                            showCustomDialog = true
+                            expanded = false
+                        } else {
+                            onRoleSelected(role)
+                            expanded = false
+                        }
+                    }
+                )
+            }
+        }
+    }
+
+    // Custom role dialog
+    if (showCustomDialog) {
+        AlertDialog(
+            onDismissRequest = { showCustomDialog = false },
+            title = { Text(context.getString(R.string.add_custom_role)) },
+            text = {
+                Column {
+                    Text(context.getString(R.string.enter_custom_role))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = customRole,
+                        onValueChange = { customRole = it },
+                        label = { Text(context.getString(R.string.role)) },
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (customRole.isNotBlank()) {
+                            onRoleSelected(customRole.trim())
+                            customRole = ""
+                        }
+                        showCustomDialog = false
+                    }
+                ) {
+                    Text(context.getString(R.string.add))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    showCustomDialog = false
+                    customRole = ""
+                }) {
+                    Text(context.getString(R.string.cancel))
+                }
+            }
         )
     }
 }

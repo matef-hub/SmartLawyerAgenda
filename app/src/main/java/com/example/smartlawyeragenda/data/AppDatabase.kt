@@ -14,7 +14,7 @@ import com.example.smartlawyeragenda.data.entities.SessionEntity
 
 @Database(
     entities = [CaseEntity::class, SessionEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 @TypeConverters(DatabaseConverters::class)
@@ -36,7 +36,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     DATABASE_NAME
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .fallbackToDestructiveMigrationOnDowngrade(false) // safer for downgrades
                     .build()
 
@@ -68,6 +68,36 @@ abstract class AppDatabase : RoomDatabase() {
                 } catch (_: Exception) { }
                 try {
                     db.execSQL("ALTER TABLE sessions ADD COLUMN sessionTime TEXT")
+                } catch (_: Exception) { }
+            }
+        }
+
+        // Migration from version 2 to 3 with role fields
+// Migration from version 2 to 3 with role fields + indices
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    db.execSQL("ALTER TABLE cases ADD COLUMN clientRole TEXT")
+                } catch (_: Exception) { }
+                try {
+                    db.execSQL("ALTER TABLE cases ADD COLUMN opponentRole TEXT")
+                } catch (_: Exception) { }
+
+                // ✅ إنشاء الفهارس اللي Room متوقعها
+                try {
+                    db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_cases_caseNumber ON cases(caseNumber)")
+                } catch (_: Exception) { }
+                try {
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_cases_clientName ON cases(clientName)")
+                } catch (_: Exception) { }
+                try {
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_cases_clientRole ON cases(clientRole)")
+                } catch (_: Exception) { }
+                try {
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_cases_createdAt ON cases(createdAt)")
+                } catch (_: Exception) { }
+                try {
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_cases_opponentRole ON cases(opponentRole)")
                 } catch (_: Exception) { }
             }
         }

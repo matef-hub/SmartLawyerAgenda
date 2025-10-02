@@ -78,7 +78,7 @@ fun SettingsScreen(
                 title = {
                     Text(
                         text = stringResource(R.string.settings),
-                        style = AppTypography.HeadlineSmall,
+                        style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = AppColors.OnPrimary
                     )
@@ -140,7 +140,7 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(AppSpacing.Small))
                             Text(
                                 text = "حالة تسجيل الدخول",
-                                style = AppTypography.TitleMedium,
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = AppColors.Primary
                             )
@@ -153,7 +153,7 @@ fun SettingsScreen(
                         ) {
                             Text(
                                 text = if (isLoggedIn) "مسجل الدخول" else "غير مسجل الدخول",
-                                style = AppTypography.BodyLarge,
+                                style = MaterialTheme.typography.bodyLarge,
                                 color = if (isLoggedIn) AppColors.Success else AppColors.Error
                             )
 
@@ -176,7 +176,7 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.height(AppSpacing.Small))
                             Text(
                                 text = "يجب تسجيل الدخول لاستخدام النسخ الاحتياطية",
-                                style = AppTypography.BodySmall,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = AppColors.OnSurfaceVariant
                             )
                         }
@@ -204,7 +204,7 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(AppSpacing.Small))
                             Text(
                                 text = "النسخ الاحتياطية",
-                                style = AppTypography.TitleMedium,
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = AppColors.Primary
                             )
@@ -212,7 +212,7 @@ fun SettingsScreen(
 
                         Text(
                             text = "يمكنك إنشاء نسخة احتياطية من جميع بياناتك على Google Drive واستعادتها لاحقاً",
-                            style = AppTypography.BodyMedium,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = AppColors.OnSurfaceVariant
                         )
 
@@ -316,7 +316,7 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(AppSpacing.Small))
                             Text(
                                 text = "البيانات التجريبية",
-                                style = AppTypography.TitleMedium,
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = AppColors.Primary
                             )
@@ -324,7 +324,7 @@ fun SettingsScreen(
 
                         Text(
                             text = "يمكنك تحميل بيانات تجريبية للاختبار أو مسح جميع البيانات",
-                            style = AppTypography.BodyMedium,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = AppColors.OnSurfaceVariant
                         )
 

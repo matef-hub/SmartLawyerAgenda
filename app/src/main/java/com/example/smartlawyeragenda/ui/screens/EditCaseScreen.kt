@@ -14,7 +14,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import com.example.smartlawyeragenda.data.entities.CaseEntity
+import com.example.smartlawyeragenda.ui.components.RoleDropdown
+import com.example.smartlawyeragenda.ui.theme.TypographyUtils
+import com.example.smartlawyeragenda.R
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,10 +29,13 @@ fun EditCaseScreen(
     onSave: (CaseEntity) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     var caseNumber by remember { mutableStateOf(existingCase.caseNumber) }
     var rollNumber by remember { mutableStateOf(existingCase.rollNumber ?: "") }
     var clientName by remember { mutableStateOf(existingCase.clientName) }
     var opponentName by remember { mutableStateOf(existingCase.opponentName ?: "") }
+    var clientRole by remember { mutableStateOf(existingCase.clientRole ?: "") }
+    var opponentRole by remember { mutableStateOf(existingCase.opponentRole ?: "") }
     var caseType by remember { mutableStateOf(existingCase.caseType ?: "") }
     var caseDescription by remember { mutableStateOf(existingCase.caseDescription ?: "") }
     var isActive by remember { mutableStateOf(existingCase.isActive) }
@@ -42,9 +50,7 @@ fun EditCaseScreen(
             title = {
                 Text(
                     text = "تعديل القضية",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold
-                    )
+                    style = TypographyUtils.bold(MaterialTheme.typography.titleLarge)
                 )
             },
             navigationIcon = {
@@ -62,6 +68,8 @@ fun EditCaseScreen(
                                 rollNumber = rollNumber.trim().takeIf { it.isNotBlank() },
                                 clientName = clientName.trim(),
                                 opponentName = opponentName.trim().takeIf { it.isNotBlank() },
+                                clientRole = clientRole.trim().takeIf { it.isNotBlank() },
+                                opponentRole = opponentRole.trim().takeIf { it.isNotBlank() },
                                 caseType = caseType.trim().takeIf { it.isNotBlank() },
                                 caseDescription = caseDescription.trim().takeIf { it.isNotBlank() },
                                 isActive = isActive,
@@ -69,7 +77,7 @@ fun EditCaseScreen(
                             )
                             onSave(updatedCase)
                         } else {
-                            errorMessage = "يرجى ملء الحقول المطلوبة"
+                            errorMessage = context.getString(R.string.please_fill_required_fields)
                         }
                     },
                     enabled = !isLoading
@@ -127,12 +135,26 @@ fun EditCaseScreen(
                 isError = clientName.isBlank()
             )
 
+            // Client Role
+            RoleDropdown(
+                selectedRole = clientRole,
+                onRoleSelected = { clientRole = it },
+                label = "صفة الموكل"
+            )
+
             // Opponent Name (Optional)
             OutlinedTextField(
                 value = opponentName,
                 onValueChange = { opponentName = it },
                 label = { Text("اسم الخصم") },
                 modifier = Modifier.fillMaxWidth()
+            )
+
+            // Opponent Role
+            RoleDropdown(
+                selectedRole = opponentRole,
+                onRoleSelected = { opponentRole = it },
+                label = "صفة الخصم"
             )
 
             // Case Type (Optional)
@@ -192,13 +214,15 @@ fun EditCaseScreen(
                             rollNumber = rollNumber.trim().takeIf { it.isNotBlank() },
                             clientName = clientName.trim(),
                             opponentName = opponentName.trim().takeIf { it.isNotBlank() },
+                            clientRole = clientRole.trim().takeIf { it.isNotBlank() },
+                            opponentRole = opponentRole.trim().takeIf { it.isNotBlank() },
                             caseType = caseType.trim().takeIf { it.isNotBlank() },
                             caseDescription = caseDescription.trim().takeIf { it.isNotBlank() },
                             isActive = isActive
                         )
                         onSave(updatedCase)
                     } else {
-                        errorMessage = "يرجى ملء الحقول المطلوبة"
+                        errorMessage = context.getString(R.string.please_fill_required_fields)
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -211,7 +235,7 @@ fun EditCaseScreen(
                     )
                     Spacer(Modifier.width(8.dp))
                 }
-                Text("حفظ التعديلات")
+                Text(context.getString(R.string.save_changes))
             }
         }
     }
@@ -233,6 +257,8 @@ fun EditCaseScreenPreview() {
                 clientName = "أحمد محمد",
                 rollNumber = "456",
                 opponentName = "شركة ABC",
+                clientRole = "مدعي",
+                opponentRole = "مدعى عليه",
                 caseType = "تجاري",
                 caseDescription = "قضية تجارية تتعلق بعقد"
             ),

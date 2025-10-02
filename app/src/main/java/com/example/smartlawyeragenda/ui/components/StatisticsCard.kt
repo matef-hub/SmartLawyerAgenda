@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.example.smartlawyeragenda.repository.OverallStatistics
+import com.example.smartlawyeragenda.ui.theme.TypographyUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -174,10 +175,11 @@ private fun DetailedStatItem(label: String, value: String, color: Color) {
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
+                style = TypographyUtils.withAmiriFont(
+                    MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = color
+                )
         )
     }
 }

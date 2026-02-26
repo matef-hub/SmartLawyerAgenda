@@ -31,10 +31,11 @@ import com.example.smartlawyeragenda.ui.theme.*
 
 @Composable
 fun LoginScreen(
+    isLoading: Boolean,
+    errorMessage: String?,
     onSignInClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var isLoading by remember { mutableStateOf(false) }
     var startAnimation by remember { mutableStateOf(false) }
     val alphaAnimation = remember { Animatable(0f) }
     val scaleAnimation = remember { Animatable(0.8f) }
@@ -190,7 +191,6 @@ fun LoginScreen(
             // Enhanced Sign in button with modern design
             EnhancedButton(
                 onClick = {
-                    isLoading = true
                     onSignInClick()
                 },
                 modifier = Modifier
@@ -204,6 +204,24 @@ fun LoginScreen(
                 isLoading = isLoading,
                 variant = ButtonVariant.Primary
             )
+
+            if (!errorMessage.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(AppSpacing.Medium))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = AppColors.Error.copy(alpha = 0.12f)
+                    )
+                ) {
+                    Text(
+                        text = errorMessage,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = AppColors.Error,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(AppSpacing.Medium)
+                    )
+                }
+            }
             
             Spacer(modifier = Modifier.height(AppSpacing.Large))
             

@@ -145,15 +145,19 @@
     <string-array name="predefined_roles">
         <item>مدعي</item>
         <item>مدعى عليه</item>
-        <item>شاهد</item>
-        <item>خبير</item>
-        <item>وكيل</item>
-        <item>محامي</item>
-        <item>مستشار قانوني</item>
-        <item>نائب عام</item>
-        <item>قاضي</item>
-        <item>كاتب عدل</item>
-        <item>مترجم</item>
-        <item>أخرى</item>
+        <item>مستأنف</item>
+        <item>مستأنف ضده</item>
+        <item>طاعن</item>
+        <item>مطعون ضده</item>
+        <item>مدخل في الدعوى</item>
+        <item>متدخل انضمامي</item>
+        <item>متدخل هجومي</item>
+        <item>وارث</item>
+        <item>موروث</item>
+        <item>نائب شرعي</item>
+        <item>النيابة العامة</item>
+        <item>المتهم</item>
+        <item>المجني عليه</item>
+        <item>المدعي بالحق المدني</item>
     </string-array>
 </resources>

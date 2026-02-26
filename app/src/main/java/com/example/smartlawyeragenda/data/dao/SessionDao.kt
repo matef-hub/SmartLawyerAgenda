@@ -38,6 +38,9 @@ interface SessionDao {
     @Query("SELECT * FROM sessions ORDER BY sessionDate DESC")
     fun getAllSessions(): Flow<List<SessionEntity>>
 
+    @Query("SELECT COUNT(*) FROM sessions")
+    suspend fun getSessionsCount(): Int
+
     @Query("""
         SELECT s.*, c.caseNumber, c.clientName, c.opponentName 
         FROM sessions s 

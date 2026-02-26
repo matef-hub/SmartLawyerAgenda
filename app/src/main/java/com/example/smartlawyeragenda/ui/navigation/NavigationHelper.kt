@@ -11,6 +11,21 @@ import com.example.smartlawyeragenda.data.entities.SessionEntity
 object NavigationHelper {
     
     /**
+     * Navigate to login screen
+     */
+    fun navigateToLogin(
+        navController: NavController,
+        navOptions: NavOptions? = null
+    ) {
+        try {
+            navController.navigate(NavigationConstants.LOGIN_ROUTE, navOptions)
+        } catch (e: Exception) {
+            android.util.Log.e("NavigationHelper", "Error navigating to login", e)
+            navController.popBackStack()
+        }
+    }
+
+    /**
      * Navigate to add session screen with optional caseId
      */
     fun navigateToAddSession(
@@ -191,7 +206,7 @@ object NavigationHelper {
         }
         
         fun isValidRoute(route: String?): Boolean {
-            return !route.isNullOrBlank() && route.startsWith("/")
+            return !route.isNullOrBlank() && !route.contains(" ")
         }
     }
 }

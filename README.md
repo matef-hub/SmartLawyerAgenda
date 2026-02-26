@@ -13,7 +13,7 @@
 
 ## متطلبات النظام
 
-- Android 7.0 (API 24) أو أحدث
+- Android 8.0 (API 26) أو أحدث
 - Google Play Services
 - اتصال بالإنترنت للنسخ الاحتياطية
 
@@ -185,3 +185,4 @@ app/src/main/java/com/example/smartlawyeragenda/
 ---
 
 **ملاحظة**: هذا التطبيق مخصص للمحامين العرب ويدعم اللغة العربية بالكامل مع التصميم RTL.
+

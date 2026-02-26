@@ -95,8 +95,8 @@ fun SmartLawyerAgendaThemeWithManager(
     themeState: ThemeState,
     content: @Composable () -> Unit
 ) {
-    val isDarkMode = themeState.getCurrentTheme()
-    
+    val isDarkMode = themeState.getCurrentTheme(isSystemInDarkTheme())
+
     SmartLawyerAgendaTheme(
         darkTheme = isDarkMode,
         content = content

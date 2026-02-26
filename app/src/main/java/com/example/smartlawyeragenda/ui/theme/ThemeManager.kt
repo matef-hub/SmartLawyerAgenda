@@ -34,13 +34,8 @@ class ThemeState {
         _isSystemTheme.value = true
     }
 
-    fun getCurrentTheme(): Boolean {
-        return if (_isSystemTheme.value) {
-            // هنا ممكن تستخدم إعداد النظام
-            false
-        } else {
-            _isDarkMode.value
-        }
+    fun getCurrentTheme(systemDarkMode: Boolean): Boolean {
+        return if (_isSystemTheme.value) systemDarkMode else _isDarkMode.value
     }
 }
 

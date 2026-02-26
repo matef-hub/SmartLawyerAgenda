@@ -2,9 +2,6 @@ package com.example.smartlawyeragenda.ui.components
 
 import com.example.smartlawyeragenda.data.entities.CaseEntity
 import com.example.smartlawyeragenda.repository.CaseStatistics
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 
 /**
  * Helper class for case search functionality

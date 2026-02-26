@@ -1,27 +1,50 @@
 package com.example.smartlawyeragenda.ui
 
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.smartlawyeragenda.data.AppDatabase
+import com.example.smartlawyeragenda.data.entities.CaseEntity
+import com.example.smartlawyeragenda.data.entities.SessionStatus
+import com.example.smartlawyeragenda.repository.CaseStatistics
 import com.example.smartlawyeragenda.repository.MainRepository
+import com.example.smartlawyeragenda.ui.components.CaseSearchHelper
+import com.example.smartlawyeragenda.ui.components.DeleteCaseDialog
+import com.example.smartlawyeragenda.ui.components.DeleteSessionDialog
+import com.example.smartlawyeragenda.ui.components.ExportConfirmationDialog
+import com.example.smartlawyeragenda.ui.components.GenericErrorDialog
+import com.example.smartlawyeragenda.ui.components.GoogleSignInHelper
+import com.example.smartlawyeragenda.ui.components.ToggleCaseStatusDialog
 import com.example.smartlawyeragenda.ui.navigation.NavigationConstants
 import com.example.smartlawyeragenda.ui.navigation.NavigationHelper
-import com.example.smartlawyeragenda.ui.screens.*
+import com.example.smartlawyeragenda.ui.screens.AddCaseScreen
+import com.example.smartlawyeragenda.ui.screens.AddEditSessionScreen
+import com.example.smartlawyeragenda.ui.screens.AgendaScreen
+import com.example.smartlawyeragenda.ui.screens.CasesScreen
+import com.example.smartlawyeragenda.ui.screens.EditCaseScreen
+import com.example.smartlawyeragenda.ui.screens.LoginScreen
+import com.example.smartlawyeragenda.ui.screens.SettingsScreen
+import com.example.smartlawyeragenda.ui.screens.SplashScreen
 import com.example.smartlawyeragenda.ui.theme.ThemeState
 import com.example.smartlawyeragenda.utils.BackupManager
+import com.example.smartlawyeragenda.utils.ExportHelper
 import com.example.smartlawyeragenda.viewmodel.AgendaViewModel
 import com.example.smartlawyeragenda.viewmodel.AgendaViewModelFactory
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.launch
 
-@OptIn(DelicateCoroutinesApi::class)
 @Composable
+@Suppress("UNUSED_PARAMETER")
 fun AppNavHost(
     database: AppDatabase,
     backupManager: BackupManager,
@@ -34,12 +57,16 @@ fun AppNavHost(
     )
 
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    val googleSignInHelper = remember { GoogleSignInHelper(context) }
+    val exportHelper = remember { ExportHelper(context) }
 
     NavHost(
         navController = navController,
         startDestination = NavigationConstants.SPLASH_ROUTE
     ) {
-        // Splash Screen
         composable(NavigationConstants.SPLASH_ROUTE) {
             SplashScreen(
                 onSplashFinished = {
@@ -50,31 +77,46 @@ fun AppNavHost(
             )
         }
 
-        // Login Screen
         composable(NavigationConstants.LOGIN_ROUTE) {
-            var isLoading by remember { mutableStateOf(false) }
-            var errorMessage by remember { mutableStateOf<String?>(null) }
+            var isSigningIn by remember { mutableStateOf(false) }
+            var loginError by remember { mutableStateOf<String?>(null) }
 
             LoginScreen(
+                isLoading = isSigningIn,
+                errorMessage = loginError,
                 onSignInClick = {
-                    isLoading = true
-                    errorMessage = null
-                    // TODO: Implement actual Google Sign-In
-                    // For now, simulate successful login
-                    kotlinx.coroutines.GlobalScope.launch {
-                        kotlinx.coroutines.delay(2000) // Simulate network delay
-                        isLoading = false
-                        navController.navigate(NavigationConstants.AGENDA_ROUTE)
+                    if (isSigningIn) return@LoginScreen
+
+                    coroutineScope.launch {
+                        isSigningIn = true
+                        loginError = null
+
+                        val signInResult = googleSignInHelper.signIn()
+                        if (signInResult == null || !signInResult.isSuccess) {
+                            loginError = "Google sign-in failed"
+                            isSigningIn = false
+                            return@launch
+                        }
+
+                        val initialized = viewModel.initializeGoogleDriveAccount(signInResult.email)
+                        if (!initialized) {
+                            loginError = "Signed in, but account initialization failed"
+                            isSigningIn = false
+                            return@launch
+                        }
+
+                        isSigningIn = false
+
+                        if (!navController.popBackStack()) {
+                            NavigationHelper.navigateToAgenda(navController)
+                        }
                     }
                 }
             )
         }
 
-        // Main Agenda Screen
         composable(NavigationConstants.AGENDA_ROUTE) {
             var showDeleteSessionDialog by remember { mutableStateOf<com.example.smartlawyeragenda.viewmodel.SessionWithCase?>(null) }
-            var showErrorDialog by remember { mutableStateOf<String?>(null) }
-            var isProcessing by remember { mutableStateOf(false) }
 
             AgendaScreen(
                 uiState = uiState,
@@ -97,16 +139,9 @@ fun AppNavHost(
                     NavigationHelper.navigateToCases(navController)
                 },
                 onSearchQuery = { query ->
-                    isProcessing = true
                     viewModel.searchSessions(query)
-                    // Simulate search delay
-                    kotlinx.coroutines.GlobalScope.launch {
-                        kotlinx.coroutines.delay(300)
-                        isProcessing = false
-                    }
                 },
                 onDateFilterSelected = { filter ->
-                    // Delegate to VM per filter type
                     when (filter) {
                         is com.example.smartlawyeragenda.ui.components.DateFilter.Today -> viewModel.selectDate(filter.startDate)
                         is com.example.smartlawyeragenda.ui.components.DateFilter.Tomorrow -> viewModel.selectDate(filter.startDate)
@@ -117,19 +152,12 @@ fun AppNavHost(
                     }
                 },
                 onUpdateSessionStatus = { sessionId, status ->
-                    isProcessing = true
                     viewModel.updateSessionStatus(sessionId, status)
-                    // Simulate processing delay
-                    kotlinx.coroutines.GlobalScope.launch {
-                        kotlinx.coroutines.delay(500)
-                        isProcessing = false
-                    }
                 }
             )
 
-            // Delete Session Confirmation Dialog
             showDeleteSessionDialog?.let { sessionWithCase ->
-                com.example.smartlawyeragenda.ui.components.DeleteSessionDialog(
+                DeleteSessionDialog(
                     sessionTitle = sessionWithCase.getDisplayTitle(),
                     onConfirm = {
                         viewModel.deleteSession(sessionWithCase.session)
@@ -140,70 +168,63 @@ fun AppNavHost(
                 )
             }
 
-            // Error Dialog
-            com.example.smartlawyeragenda.ui.components.GenericErrorDialog(
-                message = showErrorDialog ?: "",
-                onDismiss = { showErrorDialog = null },
-                isVisible = showErrorDialog != null
+            GenericErrorDialog(
+                message = uiState.error ?: "",
+                onDismiss = { viewModel.clearError() },
+                isVisible = uiState.error != null
             )
-
-            // Processing Loading State
-            if (isProcessing) {
-                com.example.smartlawyeragenda.ui.components.LoadingState(
-                    message = "جاري المعالجة...",
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
         }
 
-        // Add Session Screen (without caseId - will show case selection)
         composable(NavigationConstants.ADD_SESSION_ROUTE) {
             AddEditSessionScreen(
                 navController = navController,
-                cases = uiState.cases.ifEmpty { uiState.sessions.map { it.case }.distinctBy { it.caseId } },
+                cases = uiState.cases,
                 onSave = { session ->
-                    // Get the case for this session
-                    val case = uiState.cases.find { it.caseId == session.caseId }
-
-                    viewModel.saveSession(
-                        case = case ?: return@AddEditSessionScreen,
-                        session = session,
-                        createNextSession = false,
-                        nextSessionDate = null
-                    )
-                    navController.popBackStack()
+                    val sessionCase = uiState.cases.find { it.caseId == session.caseId }
+                    if (sessionCase != null) {
+                        viewModel.saveSession(
+                            case = sessionCase,
+                            session = session,
+                            createNextSession = false,
+                            nextSessionDate = null
+                        )
+                        navController.popBackStack()
+                    }
                 }
             )
         }
 
-        // Add Session Screen (with specific caseId)
         composable(NavigationConstants.ADD_SESSION_WITH_CASE_ROUTE) { backStackEntry ->
-            val caseId = backStackEntry.arguments?.getString(NavigationConstants.Arguments.CASE_ID)?.toLongOrNull() ?: 0L
+            val caseId = backStackEntry.arguments
+                ?.getString(NavigationConstants.Arguments.CASE_ID)
+                ?.toLongOrNull()
+                ?: 0L
 
             AddEditSessionScreen(
                 navController = navController,
-                cases = uiState.cases.ifEmpty { uiState.sessions.map { it.case }.distinctBy { it.caseId } },
+                cases = uiState.cases,
+                preselectedCaseId = caseId,
                 onSave = { session ->
-                    // Get the case for this session
-                    val case = uiState.cases.find { it.caseId == session.caseId }
-
-                    viewModel.saveSession(
-                        case = case ?: return@AddEditSessionScreen,
-                        session = session,
-                        createNextSession = false,
-                        nextSessionDate = null
-                    )
-                    navController.popBackStack()
+                    val sessionCase = uiState.cases.find { it.caseId == session.caseId }
+                    if (sessionCase != null) {
+                        viewModel.saveSession(
+                            case = sessionCase,
+                            session = session,
+                            createNextSession = false,
+                            nextSessionDate = null
+                        )
+                        navController.popBackStack()
+                    }
                 }
             )
         }
 
-        // Edit Session Screen
         composable(NavigationConstants.EDIT_SESSION_WITH_ID_ROUTE) { backStackEntry ->
-            val sessionId = backStackEntry.arguments?.getString(NavigationConstants.Arguments.SESSION_ID)?.toLongOrNull()
+            val sessionId = backStackEntry.arguments
+                ?.getString(NavigationConstants.Arguments.SESSION_ID)
+                ?.toLongOrNull()
 
             if (sessionId == null || !NavigationHelper.Validation.isValidSessionId(sessionId)) {
-                // Invalid session ID, navigate back with error handling
                 LaunchedEffect(Unit) {
                     NavigationHelper.navigateBack(navController, NavigationConstants.AGENDA_ROUTE)
                 }
@@ -213,7 +234,6 @@ fun AppNavHost(
             val sessionWithCase = uiState.sessions.find { it.session.sessionId == sessionId }
 
             if (sessionWithCase != null) {
-                // Session found in current state
                 AddEditSessionScreen(
                     navController = navController,
                     cases = listOf(sessionWithCase.case),
@@ -229,40 +249,28 @@ fun AppNavHost(
                     }
                 )
             } else {
-                // Session not in current state, load from database
                 var isLoadingSession by remember { mutableStateOf(true) }
                 var loadedSession by remember { mutableStateOf<com.example.smartlawyeragenda.data.entities.SessionEntity?>(null) }
-                var loadedCase by remember { mutableStateOf<com.example.smartlawyeragenda.data.entities.CaseEntity?>(null) }
+                var loadedCase by remember { mutableStateOf<CaseEntity?>(null) }
 
                 LaunchedEffect(sessionId) {
                     try {
                         val session = viewModel.getSessionById(sessionId)
                         if (session != null) {
-                            val case = viewModel.getCaseById(session.caseId)
                             loadedSession = session
-                            loadedCase = case
+                            loadedCase = viewModel.getCaseById(session.caseId)
                         }
-                    } catch (e: Exception) {
-                        // Handle error - log and set error state
-                        android.util.Log.e("AppNavHost", "Error loading session $sessionId", e)
-                        isLoadingSession = false
-                        // Show error dialog
-                        // TODO: Show error dialog
                     } finally {
                         isLoadingSession = false
                     }
                 }
 
                 when {
-                    isLoadingSession -> {
-                        // Show loading state
-                        androidx.compose.material3.CircularProgressIndicator()
-                    }
+                    isLoadingSession -> androidx.compose.material3.CircularProgressIndicator()
                     loadedSession != null && loadedCase != null -> {
-                        // Show edit screen with loaded data
                         AddEditSessionScreen(
                             navController = navController,
-                            cases = loadedCase?.let { listOf(it) } ?: emptyList(),
+                            cases = listOf(loadedCase!!),
                             existingSession = loadedSession,
                             onSave = { session ->
                                 viewModel.saveSession(
@@ -276,7 +284,6 @@ fun AppNavHost(
                         )
                     }
                     else -> {
-                        // Session not found, navigate back with error handling
                         LaunchedEffect(Unit) {
                             NavigationHelper.navigateBack(navController, NavigationConstants.AGENDA_ROUTE)
                         }
@@ -285,16 +292,23 @@ fun AppNavHost(
             }
         }
 
-        // Settings Screen
         composable(NavigationConstants.SETTINGS_ROUTE) {
             var showJsonExportDialog by remember { mutableStateOf(false) }
             var showCsvExportDialog by remember { mutableStateOf(false) }
             var isExporting by remember { mutableStateOf(false) }
             var exportError by remember { mutableStateOf<String?>(null) }
+            var exportSuccessMessage by remember { mutableStateOf<String?>(null) }
 
             SettingsScreen(
                 isLoggedIn = uiState.isLoggedIn,
                 isLoading = uiState.isLoading || isExporting,
+                onSignInClick = {
+                    NavigationHelper.navigateToLogin(navController)
+                },
+                onSignOutClick = {
+                    googleSignInHelper.signOut()
+                    viewModel.signOutFromGoogle()
+                },
                 onBackupClick = {
                     viewModel.backupToDrive()
                 },
@@ -314,23 +328,30 @@ fun AppNavHost(
                 }
             )
 
-            // JSON Export Confirmation Dialog
-            com.example.smartlawyeragenda.ui.components.ExportConfirmationDialog(
+            ExportConfirmationDialog(
                 format = "JSON",
                 onConfirm = {
                     showJsonExportDialog = false
-                    isExporting = true
-                    exportError = null
+                    coroutineScope.launch {
+                        isExporting = true
+                        exportError = null
 
-                    // TODO: Implement actual JSON export
-                    kotlinx.coroutines.GlobalScope.launch {
                         try {
-                            kotlinx.coroutines.delay(2000) // Simulate export process
+                            val exportData = viewModel.exportLocalBackup()
+                            exportHelper.exportToJson(exportData.cases, exportData.sessions)
+                                .fold(
+                                    onSuccess = { uri ->
+                                        exportHelper.shareFile(uri, "application/json")
+                                        exportSuccessMessage = "JSON export completed"
+                                    },
+                                    onFailure = { error ->
+                                        exportError = error.message ?: "JSON export failed"
+                                    }
+                                )
+                        } catch (exception: Exception) {
+                            exportError = exception.message ?: "JSON export failed"
+                        } finally {
                             isExporting = false
-                            // Show success message
-                        } catch (_: Exception) {
-                            isExporting = false
-                            exportError = "فشل في تصدير البيانات إلى JSON"
                         }
                     }
                 },
@@ -338,23 +359,30 @@ fun AppNavHost(
                 isVisible = showJsonExportDialog
             )
 
-            // CSV Export Confirmation Dialog
-            com.example.smartlawyeragenda.ui.components.ExportConfirmationDialog(
+            ExportConfirmationDialog(
                 format = "CSV",
                 onConfirm = {
                     showCsvExportDialog = false
-                    isExporting = true
-                    exportError = null
+                    coroutineScope.launch {
+                        isExporting = true
+                        exportError = null
 
-                    // TODO: Implement actual CSV export
-                    kotlinx.coroutines.GlobalScope.launch {
                         try {
-                            kotlinx.coroutines.delay(2000) // Simulate export process
+                            val exportData = viewModel.exportLocalBackup()
+                            exportHelper.exportToCsv(exportData.cases, exportData.sessions)
+                                .fold(
+                                    onSuccess = { uri ->
+                                        exportHelper.shareFile(uri, "text/csv")
+                                        exportSuccessMessage = "CSV export completed"
+                                    },
+                                    onFailure = { error ->
+                                        exportError = error.message ?: "CSV export failed"
+                                    }
+                                )
+                        } catch (exception: Exception) {
+                            exportError = exception.message ?: "CSV export failed"
+                        } finally {
                             isExporting = false
-                            // Show success message
-                        } catch (_: Exception) {
-                            isExporting = false
-                            exportError = "فشل في تصدير البيانات إلى CSV"
                         }
                     }
                 },
@@ -362,55 +390,68 @@ fun AppNavHost(
                 isVisible = showCsvExportDialog
             )
 
-            // Export Error Dialog
-            com.example.smartlawyeragenda.ui.components.ExportErrorDialog(
-                onRetry = {
-                    exportError = null
-                    // Retry logic here
-                },
+            GenericErrorDialog(
+                message = exportError ?: "",
+                onRetry = { exportError = null },
                 onDismiss = { exportError = null },
                 isVisible = exportError != null
             )
+
+            GenericErrorDialog(
+                message = uiState.error ?: "",
+                onDismiss = { viewModel.clearError() },
+                isVisible = uiState.error != null
+            )
+
+            if (exportSuccessMessage != null) {
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { exportSuccessMessage = null },
+                    confirmButton = {
+                        androidx.compose.material3.TextButton(onClick = { exportSuccessMessage = null }) {
+                            androidx.compose.material3.Text("OK")
+                        }
+                    },
+                    title = { androidx.compose.material3.Text("Export") },
+                    text = { androidx.compose.material3.Text(exportSuccessMessage ?: "") }
+                )
+            }
         }
 
-        // Cases Screen
         composable(NavigationConstants.CASES_ROUTE) {
-            var searchQuery by remember { mutableStateOf("") }
-            var showDeleteDialog by remember { mutableStateOf<com.example.smartlawyeragenda.data.entities.CaseEntity?>(null) }
-            var showToggleDialog by remember { mutableStateOf<com.example.smartlawyeragenda.data.entities.CaseEntity?>(null) }
-            var isSearching by remember { mutableStateOf(false) }
-            var searchError by remember { mutableStateOf<String?>(null) }
+            val allSessions by repository.getAllSessions().collectAsState(initial = emptyList())
 
-            // Get case statistics
-            val caseStatistics = remember(uiState.sessions) {
-                uiState.sessions.groupBy { it.case.caseId }.mapValues { (_, sessionsWithCase) ->
-                    val case = sessionsWithCase.first().case
-                    val sessions = sessionsWithCase.map { it.session }
-                    com.example.smartlawyeragenda.repository.CaseStatistics(
+            var searchQuery by remember { mutableStateOf("") }
+            var showDeleteDialog by remember { mutableStateOf<CaseEntity?>(null) }
+            var showToggleDialog by remember { mutableStateOf<CaseEntity?>(null) }
+
+            val filteredCases = remember(uiState.cases, searchQuery) {
+                if (searchQuery.isBlank()) {
+                    uiState.cases
+                } else {
+                    CaseSearchHelper.searchCases(uiState.cases, searchQuery)
+                }
+            }
+
+            val caseStatistics = remember(uiState.cases, allSessions) {
+                val sessionsByCaseId = allSessions.groupBy { it.caseId }
+
+                uiState.cases.associate { case ->
+                    val sessions = sessionsByCaseId[case.caseId].orEmpty()
+                    case.caseId to CaseStatistics(
                         case = case,
                         totalSessions = sessions.size,
                         latestSessionDate = sessions.maxOfOrNull { it.sessionDate },
                         upcomingSessionsCount = sessions.count { it.sessionDate > System.currentTimeMillis() },
-                        completedSessionsCount = sessions.count { it.status == com.example.smartlawyeragenda.data.entities.SessionStatus.COMPLETED },
-                        postponedSessionsCount = sessions.count { it.status == com.example.smartlawyeragenda.data.entities.SessionStatus.POSTPONED }
+                        completedSessionsCount = sessions.count { it.status == SessionStatus.COMPLETED },
+                        postponedSessionsCount = sessions.count { it.status == SessionStatus.POSTPONED }
                     )
                 }
             }
 
-            // Filter cases based on search query
-            val filteredCases = remember(uiState.sessions, searchQuery) {
-                val allCases = uiState.sessions.map { it.case }.distinctBy { it.caseId }
-                if (searchQuery.isBlank()) {
-                    allCases
-                } else {
-                    com.example.smartlawyeragenda.ui.components.CaseSearchHelper.searchCases(allCases, searchQuery)
-                }
-            }
-
             CasesScreen(
-                cases = uiState.cases.ifEmpty { filteredCases },
+                cases = filteredCases,
                 caseStatistics = caseStatistics,
-                isLoading = uiState.isLoading || isSearching,
+                isLoading = uiState.isLoading,
                 onBackClick = {
                     NavigationHelper.navigateBack(navController)
                 },
@@ -418,7 +459,6 @@ fun AppNavHost(
                     NavigationHelper.navigateToAddCase(navController)
                 },
                 onCaseClick = { case ->
-                    // Navigate to add session with this case
                     NavigationHelper.navigateToAddSession(
                         navController = navController,
                         caseId = case.caseId
@@ -429,12 +469,6 @@ fun AppNavHost(
                 },
                 onSearchQuery = { query ->
                     searchQuery = query
-                    isSearching = true
-                    // Simulate search delay
-                    kotlinx.coroutines.GlobalScope.launch {
-                        kotlinx.coroutines.delay(500)
-                        isSearching = false
-                    }
                 },
                 onEditCaseClick = { case ->
                     NavigationHelper.navigateToEditCase(
@@ -447,9 +481,8 @@ fun AppNavHost(
                 }
             )
 
-            // Delete Case Confirmation Dialog
             showDeleteDialog?.let { case ->
-                com.example.smartlawyeragenda.ui.components.DeleteCaseDialog(
+                DeleteCaseDialog(
                     caseTitle = case.getDisplayName(),
                     onConfirm = {
                         viewModel.deleteCaseWithSessions(case.caseId)
@@ -460,9 +493,8 @@ fun AppNavHost(
                 )
             }
 
-            // Toggle Case Status Confirmation Dialog
             showToggleDialog?.let { case ->
-                com.example.smartlawyeragenda.ui.components.ToggleCaseStatusDialog(
+                ToggleCaseStatusDialog(
                     caseTitle = case.getDisplayName(),
                     isCurrentlyActive = case.isActive,
                     onConfirm = {
@@ -474,15 +506,13 @@ fun AppNavHost(
                 )
             }
 
-            // Search Error Dialog
-            com.example.smartlawyeragenda.ui.components.GenericErrorDialog(
-                message = searchError ?: "",
-                onDismiss = { searchError = null },
-                isVisible = searchError != null
+            GenericErrorDialog(
+                message = uiState.error ?: "",
+                onDismiss = { viewModel.clearError() },
+                isVisible = uiState.error != null
             )
         }
 
-        // Add Case Screen
         composable(NavigationConstants.ADD_CASE_ROUTE) {
             AddCaseScreen(
                 navController = navController,
@@ -493,10 +523,12 @@ fun AppNavHost(
             )
         }
 
-        // Edit Case Screen
         composable(NavigationConstants.EDIT_CASE_WITH_ID_ROUTE) { backStackEntry ->
-            val caseId = backStackEntry.arguments?.getString(NavigationConstants.Arguments.CASE_ID)?.toLongOrNull()
-            var loadedCase by remember { mutableStateOf<com.example.smartlawyeragenda.data.entities.CaseEntity?>(null) }
+            val caseId = backStackEntry.arguments
+                ?.getString(NavigationConstants.Arguments.CASE_ID)
+                ?.toLongOrNull()
+
+            var loadedCase by remember { mutableStateOf<CaseEntity?>(null) }
             var isLoading by remember { mutableStateOf(true) }
 
             LaunchedEffect(caseId) {
@@ -508,15 +540,21 @@ fun AppNavHost(
 
             when {
                 isLoading -> androidx.compose.material3.CircularProgressIndicator()
-                loadedCase != null -> EditCaseScreen(
-                    navController = navController,
-                    existingCase = loadedCase!!,
-                    onSave = { updatedCase ->
-                        viewModel.saveCase(updatedCase)
-                        NavigationHelper.navigateBack(navController)
+                loadedCase != null -> {
+                    EditCaseScreen(
+                        navController = navController,
+                        existingCase = loadedCase!!,
+                        onSave = { updatedCase ->
+                            viewModel.saveCase(updatedCase)
+                            NavigationHelper.navigateBack(navController)
+                        }
+                    )
+                }
+                else -> {
+                    LaunchedEffect(Unit) {
+                        NavigationHelper.navigateBack(navController, NavigationConstants.CASES_ROUTE)
                     }
-                )
-                else -> NavigationHelper.navigateBack(navController)
+                }
             }
         }
     }

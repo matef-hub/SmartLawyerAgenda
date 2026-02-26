@@ -38,6 +38,7 @@ import java.util.*
 fun AddEditSessionScreen(
     navController: NavController,
     cases: List<CaseEntity>,
+    preselectedCaseId: Long? = null,
     existingSession: SessionEntity? = null,
     onSave: (SessionEntity) -> Unit
 ) {
@@ -52,8 +53,11 @@ fun AddEditSessionScreen(
     var selectedCase by remember {
         mutableStateOf(
             existingSession?.let { session ->
-            cases.find { it.caseId == session.caseId }
-        })
+                cases.find { it.caseId == session.caseId }
+            } ?: preselectedCaseId?.let { preferredCaseId ->
+                cases.find { it.caseId == preferredCaseId }
+            }
+        )
     }
     var sessionDate by remember {
         mutableStateOf(existingSession?.let { dateFormatter.format(Date(it.sessionDate)) } ?: "")
@@ -364,8 +368,22 @@ fun AddEditSessionScreen(
 @Composable
 fun AddEditSessionScreenPreview() {
     val sampleCases = listOf(
-        CaseEntity(1, "123", "10", "أحمد", "محمد", System.currentTimeMillis().toString(), "وصف تجريبي"),
-        CaseEntity(2, "124", "11", "سارة", "شركة X", System.currentTimeMillis().toString(), "وصف آخر")
+        CaseEntity(
+            caseId = 1,
+            caseNumber = "123",
+            rollNumber = "10",
+            clientName = "Sample Client 1",
+            opponentName = "Sample Opponent 1",
+            caseDescription = "Sample description 1"
+        ),
+        CaseEntity(
+            caseId = 2,
+            caseNumber = "124",
+            rollNumber = "11",
+            clientName = "Sample Client 2",
+            opponentName = "Sample Opponent 2",
+            caseDescription = "Sample description 2"
+        )
     )
     MaterialTheme {
         AddEditSessionScreen(
@@ -375,4 +393,6 @@ fun AddEditSessionScreenPreview() {
         )
     }
 }
+
+
 

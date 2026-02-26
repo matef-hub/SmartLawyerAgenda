@@ -2,8 +2,6 @@ package com.example.smartlawyeragenda.data.dao
 
 import androidx.room.*
 import com.example.smartlawyeragenda.data.entities.CaseEntity
-import com.example.smartlawyeragenda.data.entities.SessionEntity
-import com.example.smartlawyeragenda.repository.DatabaseExport
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -62,10 +60,4 @@ abstract class CaseDao {
 
     @Query("SELECT COUNT(*) FROM cases WHERE caseNumber = :caseNumber AND caseId != :excludeCaseId")
     abstract suspend fun isCaseNumberExists(caseNumber: String, excludeCaseId: Long = 0): Int
-
-    // Abstract methods for session operations (to be implemented by Room)
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    abstract suspend fun insertSession(session: SessionEntity): Long
-
-    @Query("SELECT COUNT(*) FROM sessions WHERE caseId = :caseId AND sessionDate = :sessionDate AND sessionId != :excludeSessionId")
-    abstract suspend fun isSessionExists(caseId: Long, sessionDate: Long, excludeSessionId: Long = 0): Int}
+}

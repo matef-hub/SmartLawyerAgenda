@@ -79,24 +79,32 @@ class MainRepository(
     fun searchSessions(query: String): Flow<List<SessionEntity>> = sessionDao.searchSessions(query)
 
     suspend fun insertSession(session: SessionEntity): Long {
-        require(session.isValid()) { "Invalid session data" }
+        val newSession = session.copy(sessionId = 0)
+        require(newSession.isValid()) { "Invalid session data" }
 
-        if (isSessionExists(session.caseId, session.sessionDate, 0)) {
+        if (isSessionExists(newSession.caseId, newSession.sessionDate, 0)) {
             throw IllegalStateException("Session already exists for this case and date")
         }
 
-        return sessionDao.insertSession(session)
+        return sessionDao.insertSession(newSession)
     }
 
     suspend fun insertSessions(sessions: List<SessionEntity>): List<Long> {
-        sessions.forEach { session ->
+        val normalizedSessions = sessions.map { it.copy(sessionId = 0) }
+        normalizedSessions.forEach { session ->
             require(session.isValid()) { "Invalid session data in list" }
         }
-        return sessionDao.insertSessions(sessions)
+        return sessionDao.insertSessions(normalizedSessions)
     }
 
     suspend fun updateSession(session: SessionEntity) {
+        require(session.sessionId > 0L) { "Session ID must be greater than zero for update" }
         require(session.isValid()) { "Invalid session data" }
+
+        if (isSessionExists(session.caseId, session.sessionDate, session.sessionId)) {
+            throw IllegalStateException("Session already exists for this case and date")
+        }
+
         sessionDao.updateSession(session)
     }
 
@@ -117,18 +125,38 @@ class MainRepository(
         session: SessionEntity,
         createNextSession: Boolean = false,
         nextSessionDate: Long? = null
-    ): Pair<Long, Long> {
+    ): Pair<Long, Long> = database.withTransaction {
+        require(case.isValid()) { "Invalid case data" }
+        require(session.isValid()) { "Invalid session data" }
+
         val caseId = if (case.caseId == 0L) {
-            insertCase(case)
+            caseDao.insertCase(case.copy(caseId = 0))
         } else {
-            updateCase(case)
+            caseDao.updateCase(case)
             case.caseId
         }
 
         val sessionWithCaseId = session.copy(caseId = caseId)
-        val sessionId = insertSession(sessionWithCaseId)
+        val sessionId = if (sessionWithCaseId.sessionId == 0L) {
+            if (isSessionExists(caseId, sessionWithCaseId.sessionDate, 0)) {
+                throw IllegalStateException("Session already exists for this case and date")
+            }
+            sessionDao.insertSession(sessionWithCaseId.copy(sessionId = 0))
+        } else {
+            val existingSession = sessionDao.getSessionById(sessionWithCaseId.sessionId)
+                ?: throw IllegalStateException("Session not found")
 
-        if (createNextSession && nextSessionDate != null && !isSessionExists(caseId, nextSessionDate)) {
+            if (isSessionExists(caseId, sessionWithCaseId.sessionDate, sessionWithCaseId.sessionId)) {
+                throw IllegalStateException("Session already exists for this case and date")
+            }
+
+            sessionDao.updateSession(
+                sessionWithCaseId.copy(createdAt = existingSession.createdAt)
+            )
+            sessionWithCaseId.sessionId
+        }
+
+        if (createNextSession && nextSessionDate != null && !isSessionExists(caseId, nextSessionDate, 0)) {
             val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
             val dateStr = Instant.ofEpochMilli(session.sessionDate)
                 .atZone(ZoneId.systemDefault())
@@ -138,20 +166,21 @@ class MainRepository(
             val nextSession = SessionEntity(
                 caseId = caseId,
                 sessionDate = nextSessionDate,
-                fromSession = "مؤجلة من $dateStr",
+                fromSession = "Postponed from $dateStr",
                 status = SessionStatus.SCHEDULED
             )
-            insertSession(nextSession)
+            sessionDao.insertSession(nextSession.copy(sessionId = 0))
         }
 
-        return Pair(caseId, sessionId)
+        Pair(caseId, sessionId)
     }
 
     suspend fun deleteCaseWithSessions(caseId: Long) {
-        deleteSessionsByCaseId(caseId)
-        deleteCaseById(caseId)
+        database.withTransaction {
+            deleteSessionsByCaseId(caseId)
+            deleteCaseById(caseId)
+        }
     }
-
     // -------------------- Statistics --------------------
     suspend fun getTodaySessionsCount(): Int = getTodaySessions().first().size
 
@@ -159,9 +188,9 @@ class MainRepository(
 
     suspend fun getTotalCasesCount(): Int = caseDao.getCasesCount()
 
-    suspend fun getTotalSessionsCount(): Int = getAllSessions().first().size
+    suspend fun getTotalSessionsCount(): Int = sessionDao.getSessionsCount()
 
-    suspend fun getActivesCasesCount(): Int = caseDao.getActiveCasesCount()
+    suspend fun getActiveCasesCount(): Int = caseDao.getActiveCasesCount()
 
     suspend fun getCaseStatistics(caseId: Long): CaseStatistics? {
         val case = getCaseById(caseId) ?: return null
@@ -182,7 +211,7 @@ class MainRepository(
 
     suspend fun getOverallStatistics(): OverallStatistics = OverallStatistics(
         totalCases = getTotalCasesCount(),
-        activeCases = getActivesCasesCount(),
+        activeCases = getActiveCasesCount(),
         totalSessions = getTotalSessionsCount(),
         todaySessions = getTodaySessionsCount(),
         upcomingSessions = getUpcomingSessionsCount()
@@ -300,12 +329,12 @@ class MainRepository(
     }
 
     fun getSessionsForWeek(weekStartMillis: Long): Flow<List<SessionEntity>> {
-        val weekStart = Instant.ofEpochMilli(weekStartMillis).atZone(ZoneId.systemDefault()).toLocalDate()
-        val monday = weekStart.with(java.time.DayOfWeek.MONDAY)
-        val sunday = monday.plusDays(6)
+        val weekStart = Instant.ofEpochMilli(weekStartMillis)
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate()
 
-        val startMillis = monday.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        val endMillis = sunday.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val startMillis = weekStart.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val endMillis = weekStart.plusDays(7).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() - 1
 
         return getSessionsByDateRange(startMillis, endMillis)
     }
@@ -369,3 +398,4 @@ data class ImportResult(
     val skippedSessions: Int,
     val error: String?
 )
+

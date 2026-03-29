@@ -54,7 +54,7 @@ fun ThemeToggleButton(
         Spacer(modifier = Modifier.width(AppSpacing.Small))
         Text(
             text = if (isDarkMode) "الوضع المظلم" else "الوضع المضيء",
-            style = AppTypography.LabelMedium,
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Medium
         )
     }
@@ -93,7 +93,7 @@ fun ThemeToggleSwitch(
         
         Text(
             text = if (isDarkMode) "الوضع المظلم" else "الوضع المضيء",
-            style = AppTypography.BodyMedium,
+            style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
             color = if (isDarkMode) AppColors.Primary else AppColors.OnSurfaceVariant
         )
@@ -141,7 +141,7 @@ fun ThemeSelectorCard(
                 Spacer(modifier = Modifier.width(AppSpacing.Small))
                 Text(
                     text = "إعدادات المظهر",
-                    style = AppTypography.TitleMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = AppColors.Primary
                 )
@@ -161,7 +161,7 @@ fun ThemeSelectorCard(
                     "الوضع المظلم مفعل - يتم حفظ الطاقة وتقليل إجهاد العين" 
                 else 
                     "الوضع المضيء مفعل - واجهة واضحة ومشرقة",
-                style = AppTypography.BodySmall,
+                style = MaterialTheme.typography.bodySmall,
                 color = AppColors.OnSurfaceVariant
             )
         }

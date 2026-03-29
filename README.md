@@ -1,187 +1,150 @@
-# SmartLawyerAgenda - أجندة المحامي الذكية
+# SmartLawyerAgenda
 
-تطبيق أندرويد لإدارة أجندة المحاكم اليومية للمحامين مع دعم النسخ الاحتياطية على Google Drive.
+SmartLawyerAgenda is an Android application for managing legal cases and court sessions with an Arabic-first, RTL-friendly user experience.  
+تطبيق SmartLawyerAgenda هو تطبيق أندرويد لإدارة القضايا والجلسات القضائية مع تجربة استخدام عربية بالكامل ودعم اتجاه RTL.
 
-## المميزات
+The app combines local-first data storage (Room) with optional Google Drive backup/restore and file export (JSON/CSV).  
+يجمع التطبيق بين التخزين المحلي أولاً (Room) مع دعم اختياري للنسخ الاحتياطي والاستعادة عبر Google Drive وتصدير الملفات بصيغتي JSON وCSV.
 
-- **واجهة عربية RTL**: تصميم متكامل للغة العربية مع خط Amiri
-- **إدارة الجلسات**: إضافة وتعديل وحذف جلسات المحكمة
-- **التاريخ الهجري والميلادي**: عرض التواريخ بالتقويمين
-- **النسخ الاحتياطية**: نسخ احتياطية تلقائية على Google Drive
-- **قاعدة بيانات محلية**: استخدام Room Database للتخزين المحلي
-- **واجهة حديثة**: تصميم Material 3 مع Jetpack Compose
+## Highlights | المميزات
 
-## متطلبات النظام
+- Arabic and RTL-focused UI with Amiri typography.  
+  واجهة عربية موجهة لـ RTL مع خط Amiri.
+- Case management: create, edit, search, activate/deactivate, and delete cases.  
+  إدارة القضايا: إضافة وتعديل وبحث وتفعيل/تعطيل وحذف القضايا.
+- Session management: create, edit, delete, filter, and update session status.  
+  إدارة الجلسات: إضافة وتعديل وحذف وتصفية وتحديث حالة الجلسة.
+- Date intelligence: day/week/month/upcoming filters, plus Hijri and Gregorian display.  
+  مرونة في التواريخ: فلاتر يوم/أسبوع/شهر/القادم مع عرض هجري وميلادي.
+- Backup and restore through Google Drive integration.  
+  نسخ احتياطي واستعادة عبر تكامل Google Drive.
+- Data export and sharing via JSON and CSV.  
+  تصدير ومشاركة البيانات بصيغتي JSON وCSV.
+- Built with Jetpack Compose and Material 3.  
+  مبني باستخدام Jetpack Compose وMaterial 3.
 
-- Android 7.0 (API 24) أو أحدث
-- Google Play Services
-- اتصال بالإنترنت للنسخ الاحتياطية
+## Tech Stack | التقنيات المستخدمة
 
-## إعداد المشروع
+- Kotlin + Coroutines + Flow  
+  كوتلن + Coroutines + Flow
+- Jetpack Compose + Material 3  
+  جيتباك كومبوز + Material 3
+- Room Database (KSP)  
+  قاعدة بيانات Room (مع KSP)
+- AndroidX Navigation Compose  
+  AndroidX Navigation Compose
+- Google Credential Manager + Google Sign-In  
+  Google Credential Manager + تسجيل الدخول عبر Google
+- Google Drive API  
+  Google Drive API
 
-### 1. إعداد Google Services
+## Architecture Overview | نظرة على المعمارية
 
-1. اذهب إلى [Google Cloud Console](https://console.cloud.google.com/)
-2. أنشئ مشروع جديد أو اختر مشروع موجود
-3. فعّل Google Drive API و Google Sign-In API
-4. أنشئ OAuth 2.0 credentials للتطبيق
-5. حمّل ملف `google-services.json` وضعه في مجلد `app/`
+- `data/`: Room entities, DAOs, database setup.  
+  `data/`: الكيانات وواجهات DAO وإعداد قاعدة البيانات.
+- `repository/`: `MainRepository` for business/data operations.  
+  `repository/`: يحتوي `MainRepository` لعمليات البيانات ومنطق التطبيق.
+- `viewmodel/`: `AgendaViewModel` state orchestration and user actions.  
+  `viewmodel/`: يحتوي `AgendaViewModel` لإدارة الحالة وأفعال المستخدم.
+- `ui/`: navigation, screens, reusable components, and theme.  
+  `ui/`: التنقل والشاشات والمكونات القابلة لإعادة الاستخدام والثيم.
+- `utils/`: backup, export, calendar/date helpers.  
+  `utils/`: أدوات النسخ الاحتياطي والتصدير والتاريخ.
 
-### 2. إعداد قاعدة البيانات
+## Requirements | المتطلبات
 
-التطبيق يستخدم Room Database محلياً، لا حاجة لإعداد خادم خارجي.
+- Android Studio (latest stable recommended)  
+  Android Studio (يفضل أحدث إصدار مستقر)
+- JDK 21  
+  JDK 21
+- Android SDK (`compileSdk = 36`, `targetSdk = 36`, `minSdk = 26`)  
+  Android SDK (`compileSdk = 36`, `targetSdk = 36`, `minSdk = 26`)
 
-### 3. إعداد الخطوط
+## Quick Start | البدء السريع
 
-1. حمّل خط Amiri من [Google Fonts](https://fonts.google.com/specimen/Amiri)
-2. ضع ملف `Amiri-Regular.ttf` في `app/src/main/assets/fonts/`
-3. أعد تسمية الملف إلى `amiri.ttf`
-
-### 4. بناء التطبيق
+1. Clone the repository.  
+   قم باستنساخ المستودع.
+2. Place `google-services.json` inside `app/` (see Google setup below).  
+   ضع ملف `google-services.json` داخل `app/` (راجع إعداد Google أدناه).
+3. Open the project in Android Studio.  
+   افتح المشروع في Android Studio.
+4. Sync Gradle.  
+   نفّذ مزامنة Gradle.
+5. Run:  
+   شغّل:
 
 ```bash
 ./gradlew assembleDebug
 ```
 
-## هيكل المشروع
+On Windows PowerShell:  
+على Windows PowerShell:
 
-```
-app/src/main/java/com/example/smartlawyeragenda/
-│   MainActivity.kt
-│
-├───data
-│   │   AppDatabase.kt
-│   │   DatabaseConverters.kt
-│   │   SampleDataGenerator.kt
-│   │
-│   ├───dao
-│   │       CaseDao.kt
-│   │       SessionDao.kt
-│   │
-│   └───entities
-│           CaseEntity.kt
-│           SessionEntity.kt
-│
-├───repository
-│       MainRepository.kt
-│
-├───ui
-│   │   AppNavHost.kt
-│   │   AppNavHost_COMPLETED_TODOS.md
-│   │
-│   ├───animations
-│   │       AppAnimations.kt
-│   │
-│   ├───components
-│   │       CaseSearchHelper.kt
-│   │       ConfirmationDialog.kt
-│   │       DateFilterChips.kt
-│   │       DatePickerDialog.kt
-│   │       EnhancedComponents.kt
-│   │       ErrorDialog.kt
-│   │       GoogleSignInHelper.kt
-│   │       LoadingStates.kt
-│   │       SearchBar.kt
-│   │       StatisticsCard.kt
-│   │       ThemeToggle.kt
-│   │
-│   ├───navigation
-│   │       NavigationConstants.kt
-│   │       NavigationHelper.kt
-│   │       README.md
-│   │
-│   ├───screens
-│   │       AddCaseScreen.kt
-│   │       AddEditSessionScreen.kt
-│   │       AgendaScreen.kt
-│   │       CasesScreen.kt
-│   │       EditCaseScreen.kt
-│   │       LoginScreen.kt
-│   │       SettingsScreen.kt
-│   │       SplashScreen.kt
-│   │
-│   └───theme
-│           Color.kt
-│           DesignSystem.kt
-│           Theme.kt
-│           ThemeManager.kt
-│           Type.kt
-│
-├───utils
-│       BackupManager.kt
-│       ExportHelper.kt
-│       HijriUtils.kt
-│       NotificationHelper.kt
-│
-└───viewmodel
-        AgendaViewModel.kt
-        AgendaViewModelFactory.kt
+```powershell
+.\gradlew.bat assembleDebug
 ```
 
-## الاستخدام
+## Google Setup (Sign-In + Drive Backup) | إعداد Google (تسجيل الدخول + النسخ الاحتياطي عبر Drive)
 
-### إضافة جلسة جديدة
+1. Create a Google Cloud/Firebase project.  
+   أنشئ مشروع Google Cloud/Firebase.
+2. Register Android app package: `com.example.smartlawyeragenda`.  
+   سجّل حزمة تطبيق أندرويد: `com.example.smartlawyeragenda`.
+3. Enable Google Drive API.  
+   فعّل Google Drive API.
+4. Configure Google Sign-In / OAuth credentials.  
+   اضبط بيانات اعتماد Google Sign-In / OAuth.
+5. Download `google-services.json` and place it in `app/`.  
+   حمّل ملف `google-services.json` وضعه داخل `app/`.
+6. Sync project and verify `default_web_client_id` is generated.  
+   نفّذ مزامنة المشروع وتأكد من توليد `default_web_client_id`.
 
-1. اضغط على زر + في الشاشة الرئيسية
-2. أدخل معلومات القضية (رقم القضية، اسم الموكل، اسم الخصم)
-3. أدخل تفاصيل الجلسة (التاريخ، السبب، القرار)
-4. يمكنك تحديد تاريخ الجلسة التالية لإنشاء جلسة مؤجلة تلقائياً
-5. اضغط "حفظ الجلسة"
+If `default_web_client_id` is missing, sign-in will fail at runtime.  
+إذا كان `default_web_client_id` غير موجود، سيفشل تسجيل الدخول أثناء التشغيل.
 
-### النسخ الاحتياطية
-
-1. اذهب إلى الإعدادات
-2. سجل دخولك باستخدام Google
-3. اضغط "نسخ احتياطي إلى Google Drive" لحفظ البيانات
-4. اضغط "استعادة من Google Drive" لاسترجاع البيانات
-
-### المميزات المتقدمة
-
-- **الجلسات المؤجلة**: عند تحديد تاريخ الجلسة التالية، يتم إنشاء جلسة جديدة تلقائياً
-- **البحث والفلترة**: عرض الجلسات حسب التاريخ
-- **التواريخ المزدوجة**: عرض التاريخ الهجري والميلادي
-
-## التطوير
-
-### إضافة ميزات جديدة
-
-1. أضف الكيانات الجديدة في `data/entities/`
-2. أنشئ DAOs في `data/dao/`
-3. حدث المستودع في `repository/`
-4. أضف ViewModels في `viewmodel/`
-5. أنشئ UI في `ui/screens/`
-
-### الاختبار
+## Build and Test | البناء والاختبار
 
 ```bash
+./gradlew assembleDebug
 ./gradlew test
-./gradlew connectedAndroidTest
 ```
 
-## المساهمة
+Windows PowerShell:
 
-1. Fork المشروع
-2. أنشئ branch للميزة الجديدة
-3. Commit التغييرات
-4. Push إلى Branch
-5. أنشئ Pull Request
+```powershell
+.\gradlew.bat assembleDebug
+.\gradlew.bat test
+```
 
-## الترخيص
+## Project Layout | هيكل المشروع
 
-هذا المشروع مرخص تحت رخصة MIT - راجع ملف [LICENSE](LICENSE) للتفاصيل.
+```text
+app/src/main/java/com/example/smartlawyeragenda/
+  data/
+  repository/
+  ui/
+  utils/
+  viewmodel/
+```
 
-## الدعم
+## Documentation | الوثائق
 
-للحصول على الدعم أو الإبلاغ عن مشاكل، يرجى فتح issue في GitHub.
+- `FUNCTIONALITY_DOCUMENTATION.md`: feature and architecture notes.  
+  `FUNCTIONALITY_DOCUMENTATION.md`: توثيق الوظائف والمعمارية.
+- `CODE_REVIEW.md`: resolved issues and follow-up items.  
+  `CODE_REVIEW.md`: المشكلات التي تم حلها وعناصر المتابعة.
+- `TYPOGRAPHY_GUIDE.md`: font and typography standards.  
+  `TYPOGRAPHY_GUIDE.md`: معايير الخطوط والطباعة.
 
-## التحديثات القادمة
+## Roadmap Ideas | أفكار خارطة الطريق
 
-- [ ] دعم المرفقات والملفات
-- [ ] إشعارات الجلسات
-- [ ] تقارير إحصائية
-- [ ] دعم متعدد المستخدمين
-- [ ] تصدير PDF للجلسات
-
----
-
-**ملاحظة**: هذا التطبيق مخصص للمحامين العرب ويدعم اللغة العربية بالكامل مع التصميم RTL.
+- Attachments and file linking per case/session.  
+  المرفقات وربط الملفات لكل قضية/جلسة.
+- Session reminders/notifications.  
+  تذكيرات وإشعارات الجلسات.
+- Enhanced reporting and analytics.  
+  تقارير وتحليلات متقدمة.
+- Multi-user collaboration.  
+  دعم التعاون بين عدة مستخدمين.
+- Rich PDF exports.  
+  تصدير PDF متقدم.

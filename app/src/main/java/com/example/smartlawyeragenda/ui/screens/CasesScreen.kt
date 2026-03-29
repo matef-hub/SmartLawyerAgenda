@@ -88,7 +88,7 @@ fun CasesScreen(
                 title = {
                     Text(
                         text = "إدارة القضايا",
-                        style = AppTypography.HeadlineSmall,
+                        style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = AppColors.OnPrimary
                     )

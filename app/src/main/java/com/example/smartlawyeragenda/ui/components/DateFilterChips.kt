@@ -50,7 +50,8 @@ fun CustomDateFilterDropdown(
             DateFilter.Tomorrow(),
             DateFilter.ThisWeek(),
             DateFilter.NextWeek(),
-            DateFilter.ThisMonth()
+            DateFilter.ThisMonth(),
+            DateFilter.Upcoming
         )
     }
 
@@ -68,11 +69,11 @@ fun CustomDateFilterDropdown(
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
             modifier = Modifier
-                .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
                 .fillMaxWidth()
         )
 
-        ExposedDropdownMenu(
+        AppExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {

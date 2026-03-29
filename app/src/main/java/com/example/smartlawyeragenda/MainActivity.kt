@@ -13,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.example.smartlawyeragenda.data.AppDatabase
 import com.example.smartlawyeragenda.ui.AppNavHost
-import com.example.smartlawyeragenda.ui.theme.SmartLawyerAgendaTheme
 import com.example.smartlawyeragenda.ui.theme.SmartLawyerAgendaThemeWithManager
 import com.example.smartlawyeragenda.ui.theme.rememberThemeState
 import com.example.smartlawyeragenda.utils.BackupManager
@@ -23,14 +22,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            SmartLawyerAgendaTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    SmartLawyerAgendaApp()
-                }
-            }
+            SmartLawyerAgendaApp()
         }
     }
 }
@@ -41,14 +33,19 @@ fun SmartLawyerAgendaApp() {
     val database = remember { AppDatabase.getDatabase(context) }
     val backupManager = remember { BackupManager(context) }
     val themeState = rememberThemeState()
-    
+
     SmartLawyerAgendaThemeWithManager(
         themeState = themeState
     ) {
-        AppNavHost(
-            database = database,
-            backupManager = backupManager,
-            themeState = themeState
-        )
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            AppNavHost(
+                database = database,
+                backupManager = backupManager,
+                themeState = themeState
+            )
+        }
     }
 }

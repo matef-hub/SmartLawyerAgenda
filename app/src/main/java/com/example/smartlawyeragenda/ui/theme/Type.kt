@@ -2,14 +2,20 @@ package com.example.smartlawyeragenda.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.example.smartlawyeragenda.R
 
-// Font family for Arabic text (using default for now, will be replaced with Amiri when font is added)
-val AmiriFontFamily = FontFamily.Default
+// تعريف خط Amiri
+val AmiriFontFamily = FontFamily(
+    Font(R.font.amiri_regular, FontWeight.Normal),
+    Font(R.font.amiri_bold, FontWeight.Bold),
+    Font(R.font.amiri_italic, FontWeight.Normal) // italic optional
+)
 
-// Typography with Arabic font support
+// Typography بخط Amiri
 val Typography = Typography(
     displayLarge = TextStyle(
         fontFamily = AmiriFontFamily,
@@ -22,43 +28,37 @@ val Typography = Typography(
         fontFamily = AmiriFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 45.sp,
-        lineHeight = 52.sp,
-        letterSpacing = 0.sp
+        lineHeight = 52.sp
     ),
     displaySmall = TextStyle(
         fontFamily = AmiriFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 36.sp,
-        lineHeight = 44.sp,
-        letterSpacing = 0.sp
+        lineHeight = 44.sp
     ),
     headlineLarge = TextStyle(
         fontFamily = AmiriFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 32.sp,
-        lineHeight = 40.sp,
-        letterSpacing = 0.sp
+        lineHeight = 40.sp
     ),
     headlineMedium = TextStyle(
         fontFamily = AmiriFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 28.sp,
-        lineHeight = 36.sp,
-        letterSpacing = 0.sp
+        lineHeight = 36.sp
     ),
     headlineSmall = TextStyle(
         fontFamily = AmiriFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 24.sp,
-        lineHeight = 32.sp,
-        letterSpacing = 0.sp
+        lineHeight = 32.sp
     ),
     titleLarge = TextStyle(
         fontFamily = AmiriFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 22.sp,
-        lineHeight = 28.sp,
-        letterSpacing = 0.sp
+        lineHeight = 28.sp
     ),
     titleMedium = TextStyle(
         fontFamily = AmiriFontFamily,

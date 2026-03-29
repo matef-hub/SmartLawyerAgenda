@@ -10,8 +10,6 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.LayoutDirection
@@ -80,6 +78,7 @@ fun SmartLawyerAgendaTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
+        shapes = CustomShapes,
         content = {
             // Force RTL layout for Arabic language
             androidx.compose.runtime.CompositionLocalProvider(
@@ -96,8 +95,8 @@ fun SmartLawyerAgendaThemeWithManager(
     themeState: ThemeState,
     content: @Composable () -> Unit
 ) {
-    val isDarkMode = themeState.getCurrentTheme()
-    
+    val isDarkMode = themeState.getCurrentTheme(isSystemInDarkTheme())
+
     SmartLawyerAgendaTheme(
         darkTheme = isDarkMode,
         content = content

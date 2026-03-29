@@ -14,10 +14,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.example.smartlawyeragenda.repository.OverallStatistics
+import com.example.smartlawyeragenda.ui.theme.TypographyUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -41,9 +42,9 @@ fun StatisticsCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(color.copy(alpha = 0.15f), CircleShape),
+            modifier = Modifier
+                .size(48.dp)
+                .background(Color(color.red, color.green, color.blue, 0.15f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -174,10 +175,11 @@ private fun DetailedStatItem(label: String, value: String, color: Color) {
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
+                style = TypographyUtils.withAmiriFont(
+                    MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = color
+                )
         )
     }
 }

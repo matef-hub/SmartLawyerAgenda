@@ -1,13 +1,18 @@
 package com.example.smartlawyeragenda.ui.components
 
 import android.content.Context
-import android.content.Intent
+import android.util.Base64
 import android.util.Log
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
@@ -20,37 +25,23 @@ import androidx.credentials.exceptions.GetCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import org.json.JSONObject
 
 /**
- * Helper class for Google Sign-In functionality using Credential Manager API
+ * Google Sign-In helper using Credential Manager.
  */
 class GoogleSignInHelper(private val context: Context) {
 
     private val credentialManager = CredentialManager.create(context)
-    
-    // TODO: Replace with actual server client ID from google-services.json
-    private val serverClientId = "YOUR_SERVER_CLIENT_ID"
 
-    /**
-     * Check if user is already signed in
-     */
-    suspend fun isSignedIn(intent: Intent?): Boolean {
-        return try {
-            // For Credential Manager API, we check if we can get a credential
-            // This is a simplified check - in a real app, you might want to store
-            // the credential state in SharedPreferences or similar
-            val credential = getCurrentUser(intent)
-            credential != null
-        } catch (_: Exception) {
-            false
-        }
-    }
-
-    /**
-     * Start the sign-in process using Credential Manager API
-     */
     suspend fun signIn(): GoogleSignInResult? {
         return try {
+            val serverClientId = resolveServerClientId()
+            if (serverClientId.isNullOrBlank()) {
+                Log.e("GoogleSignInHelper", "Missing default_web_client_id. Check google-services.json setup.")
+                return null
+            }
+
             val googleIdOption = GetGoogleIdOption.Builder()
                 .setServerClientId(serverClientId)
                 .setFilterByAuthorizedAccounts(false)
@@ -64,7 +55,7 @@ class GoogleSignInHelper(private val context: Context) {
                 context = context,
                 request = credentialRequest
             )
-            
+
             handleSignInResult(result)
         } catch (e: GetCredentialException) {
             Log.e("GoogleSignInHelper", "Sign-in failed", e)
@@ -75,55 +66,9 @@ class GoogleSignInHelper(private val context: Context) {
         }
     }
 
-    /**
-     * Handle the sign-in result from Credential Manager
-     */
-    private fun handleSignInResult(result: GetCredentialResponse): GoogleSignInResult? {
-        val credential = result.credential
-        return when (credential) {
-            is CustomCredential -> {
-                if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                    try {
-                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                        GoogleSignInResult(
-                            idToken = googleIdTokenCredential.idToken,
-                            displayName = googleIdTokenCredential.displayName ?: "Unknown",
-                            email = googleIdTokenCredential.id,
-                            isSuccess = true
-                        )
-                    } catch (e: GoogleIdTokenParsingException) {
-                        Log.e("GoogleSignInHelper", "Invalid Google ID token", e)
-                        null
-                    }
-                } else {
-                    Log.e("GoogleSignInHelper", "Unexpected credential type")
-                    null
-                }
-            }
-            else -> {
-                Log.e("GoogleSignInHelper", "Unexpected credential type")
-                null
-            }
-        }
-    }
-
-    /**
-     * Sign out the current user
-     * Note: Credential Manager API doesn't provide a direct sign-out method.
-     * In a real app, you would clear stored credentials and session information.
-     */
     fun signOut(): Result<Unit> {
         return try {
-            // For Credential Manager API, sign-out typically involves:
-            // 1. Clearing any stored tokens/credentials
-            // 2. Clearing session information
-            // 3. Notifying your backend if needed
-            
-            // Since we're not storing credentials locally in this implementation,
-            // we just return success. In a real app, you'd clear SharedPreferences,
-            // database entries, or other stored authentication data.
-            
-            Log.d("GoogleSignInHelper", "User signed out successfully")
+            // Credential Manager has no direct sign-out; app-level session cleanup is handled in ViewModel.
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e("GoogleSignInHelper", "Sign-out failed", e)
@@ -131,29 +76,64 @@ class GoogleSignInHelper(private val context: Context) {
         }
     }
 
-    /**
-     * Get current user info
-     * Note: With Credential Manager API, this method signature is kept for compatibility
-     * but the intent parameter is not used in the new implementation.
-     */
-    suspend fun getCurrentUser(intent: Intent?): GoogleSignInResult? {
+    private fun handleSignInResult(result: GetCredentialResponse): GoogleSignInResult? {
+        val credential = result.credential
+        if (credential !is CustomCredential) {
+            Log.e("GoogleSignInHelper", "Unexpected credential type")
+            return null
+        }
+
+        if (credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+            Log.e("GoogleSignInHelper", "Unexpected custom credential type: ${credential.type}")
+            return null
+        }
+
         return try {
-            // In a real app, you would retrieve stored credentials or check current session
-            // For now, we return null as we don't persist credentials locally
-            // You might want to store the GoogleSignInResult in SharedPreferences or similar
-            // after a successful sign-in and retrieve it here
-            
-            Log.d("GoogleSignInHelper", "Getting current user - not implemented for Credential Manager")
+            val tokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+            val idToken = tokenCredential.idToken
+            val email = extractEmailFromIdToken(idToken)
+                ?: tokenCredential.id.takeIf { it.contains("@") }
+
+            if (email.isNullOrBlank()) {
+                Log.e("GoogleSignInHelper", "Unable to resolve account email from sign-in token")
+                return null
+            }
+
+            GoogleSignInResult(
+                idToken = idToken,
+                displayName = tokenCredential.displayName ?: "Unknown",
+                email = email,
+                isSuccess = true
+            )
+        } catch (e: GoogleIdTokenParsingException) {
+            Log.e("GoogleSignInHelper", "Invalid Google ID token", e)
             null
         } catch (e: Exception) {
-            Log.e("GoogleSignInHelper", "Failed to get current user", e)
+            Log.e("GoogleSignInHelper", "Failed parsing sign-in response", e)
             null
         }
+    }
+
+    private fun resolveServerClientId(): String? {
+        val id = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
+        if (id == 0) return null
+        return context.getString(id).trim().takeIf { it.isNotBlank() }
+    }
+
+    private fun extractEmailFromIdToken(idToken: String): String? {
+        return runCatching {
+            val parts = idToken.split('.')
+            if (parts.size < 2) return null
+
+            val payload = Base64.decode(parts[1], Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
+            val payloadJson = JSONObject(String(payload, Charsets.UTF_8))
+            payloadJson.optString("email").takeIf { it.isNotBlank() }
+        }.getOrNull()
     }
 }
 
 /**
- * Data class representing Google Sign-In result
+ * Data class representing Google Sign-In result.
  */
 data class GoogleSignInResult(
     val idToken: String,
@@ -163,7 +143,7 @@ data class GoogleSignInResult(
 )
 
 /**
- * Composable for Google Sign-In button with enhanced UI
+ * Composable sign-in button.
  */
 @Composable
 fun GoogleSignInButton(
@@ -192,7 +172,6 @@ fun GoogleSignInButton(
             Spacer(modifier = Modifier.width(8.dp))
             Text("Signing in...")
         } else {
-            // Google-style icon (using AccountCircle as a placeholder)
             Icon(
                 imageVector = Icons.Default.AccountCircle,
                 contentDescription = "Google Sign In",

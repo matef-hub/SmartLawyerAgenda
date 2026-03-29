@@ -5,29 +5,38 @@ import androidx.lifecycle.viewModelScope
 import com.example.smartlawyeragenda.data.entities.CaseEntity
 import com.example.smartlawyeragenda.data.entities.SessionEntity
 import com.example.smartlawyeragenda.data.entities.SessionStatus
+import com.example.smartlawyeragenda.repository.DatabaseExport
 import com.example.smartlawyeragenda.repository.MainRepository
 import com.example.smartlawyeragenda.repository.OverallStatistics
-import com.example.smartlawyeragenda.repository.DatabaseExport
 import com.example.smartlawyeragenda.utils.BackupManager
 import com.example.smartlawyeragenda.utils.HijriUtils
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 data class SessionWithCase(
     val session: SessionEntity,
     val case: CaseEntity
 ) {
-    // Helper methods for UI display
     fun getDisplayTitle(): String = "${case.caseNumber} - ${case.clientName}"
     fun getFormattedDate(): String = session.getFormattedDate()
     fun getStatusDisplay(): String = session.getStatusDisplay()
-    fun getTimeDisplay(): String = session.sessionTime ?: "غير محدد"
+    fun getTimeDisplay(): String = session.sessionTime ?: "Unavailable"
 }
 
 data class AgendaUiState(
     val sessions: List<SessionWithCase> = emptyList(),
+    val cases: List<CaseEntity> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val selectedDate: Long = System.currentTimeMillis(),
@@ -40,6 +49,14 @@ data class AgendaUiState(
     val statistics: OverallStatistics? = null
 )
 
+private enum class SessionViewMode {
+    DATE,
+    SEARCH,
+    UPCOMING,
+    WEEK,
+    MONTH
+}
+
 class AgendaViewModel(
     private val repository: MainRepository,
     private val backupManager: BackupManager
@@ -48,23 +65,34 @@ class AgendaViewModel(
     private val _uiState = MutableStateFlow(AgendaUiState())
     val uiState: StateFlow<AgendaUiState> = _uiState.asStateFlow()
 
-    private val dateFormatter = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault())
+    private val dateFormatter = DateTimeFormatter.ofPattern("yyyy/MM/dd")
+
+    private var sessionsCollectorJob: Job? = null
+    private var currentViewMode: SessionViewMode = SessionViewMode.DATE
+    private var currentSearchQuery: String = ""
+    private var currentWeekStart: Long = System.currentTimeMillis()
+    private var currentMonthStart: Long = System.currentTimeMillis()
 
     init {
+        _uiState.update { it.copy(isLoggedIn = backupManager.isSignedIn()) }
         updateDateInfo()
+        observeCases()
         loadSessionsForDate(_uiState.value.selectedDate)
         loadStatistics()
     }
 
-    // ---------------------------
-    // 🗓 Date Management
-    // ---------------------------
+    // --------------------------- Date Management ---------------------------
     fun selectDate(dateMillis: Long) {
-        _uiState.value = _uiState.value.copy(
-            selectedDate = dateMillis,
-            isSearchMode = false,
-            searchQuery = ""
-        )
+        currentViewMode = SessionViewMode.DATE
+        currentSearchQuery = ""
+
+        _uiState.update {
+            it.copy(
+                selectedDate = dateMillis,
+                isSearchMode = false,
+                searchQuery = ""
+            )
+        }
         updateDateInfo()
         loadSessionsForDate(dateMillis)
     }
@@ -74,114 +102,169 @@ class AgendaViewModel(
     }
 
     private fun updateDateInfo() {
-        val selectedDate = Date(_uiState.value.selectedDate)
-        val gregorianDate = dateFormatter.format(selectedDate)
-        val hijriDate = HijriUtils.getHijriDate(selectedDate)
+        val selectedDate = Instant.ofEpochMilli(_uiState.value.selectedDate)
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate()
 
-        _uiState.value = _uiState.value.copy(
-            gregorianDate = gregorianDate,
-            hijriDate = hijriDate
+        val gregorianDate = selectedDate.format(dateFormatter)
+        val hijriDate = HijriUtils.getHijriDate(java.util.Date(_uiState.value.selectedDate))
+
+        _uiState.update {
+            it.copy(
+                gregorianDate = gregorianDate,
+                hijriDate = hijriDate
+            )
+        }
+    }
+
+    // --------------------------- Session Loading ---------------------------
+    private fun cancelSessionsCollector() {
+        sessionsCollectorJob?.cancel()
+        sessionsCollectorJob = null
+    }
+
+    private fun collectSessions(
+        sessionsSource: kotlinx.coroutines.flow.Flow<List<SessionEntity>>,
+        isSearchMode: Boolean,
+        searchQuery: String,
+        comparator: Comparator<SessionWithCase>
+    ) {
+        cancelSessionsCollector()
+
+        sessionsCollectorJob = viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    error = null,
+                    isSearchMode = isSearchMode,
+                    searchQuery = searchQuery
+                )
+            }
+
+            sessionsSource
+                .combine(repository.getAllCases()) { sessions, cases ->
+                    sessions
+                        .mapNotNull { session ->
+                            val case = cases.find { it.caseId == session.caseId }
+                            case?.let { SessionWithCase(session, it) }
+                        }
+                        .sortedWith(comparator)
+                }
+                .catch { exception ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = exception.message ?: "Unexpected error while loading sessions"
+                        )
+                    }
+                }
+                .collectLatest { sessionsWithCases ->
+                    _uiState.update {
+                        it.copy(
+                            sessions = sessionsWithCases,
+                            isLoading = false,
+                            error = null
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun loadSessionsForDate(dateMillis: Long) {
+        currentViewMode = SessionViewMode.DATE
+
+        collectSessions(
+            sessionsSource = repository.getSessionsForDate(dateMillis),
+            isSearchMode = false,
+            searchQuery = "",
+            comparator = compareBy { it.session.sessionTime ?: "00:00" }
         )
     }
 
-    // ---------------------------
-    // 📂 Session Loading
-    // ---------------------------
-    private fun loadSessionsForDate(dateMillis: Long) {
+    private fun observeCases() {
         viewModelScope.launch {
-            try {
-                _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-
-                // Use the new repository method for getting sessions for a specific date
-                repository.getSessionsForDate(dateMillis)
-                    .combine(repository.getAllCases()) { sessions, cases ->
-                        sessions.mapNotNull { session ->
-                            val case = cases.find { it.caseId == session.caseId }
-                            case?.let { SessionWithCase(session, it) }
-                        }.sortedBy { it.session.sessionTime ?: "00:00" }
-                    }
-                    .collect { sessionsWithCases ->
-                        _uiState.value = _uiState.value.copy(
-                            sessions = sessionsWithCases,
-                            isLoading = false
-                        )
-                    }
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "حدث خطأ غير متوقع"
-                )
+            repository.getAllCases().collect { cases ->
+                _uiState.update { it.copy(cases = cases) }
             }
         }
     }
 
-    // ---------------------------
-    // 🔍 Search Functionality
-    // ---------------------------
+    // --------------------------- Search Functionality ---------------------------
     fun searchSessions(query: String) {
+        val trimmedQuery = query.trim()
+        currentSearchQuery = trimmedQuery
+
+        if (trimmedQuery.isBlank()) {
+            clearSearch()
+            return
+        }
+
+        currentViewMode = SessionViewMode.SEARCH
+        cancelSessionsCollector()
+
         viewModelScope.launch {
             try {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = true,
-                    searchQuery = query,
-                    isSearchMode = query.isNotBlank()
-                )
-
-                if (query.isBlank()) {
-                    // Return to date view
-                    loadSessionsForDate(_uiState.value.selectedDate)
-                    return@launch
+                _uiState.update {
+                    it.copy(
+                        isLoading = true,
+                        error = null,
+                        isSearchMode = true,
+                        searchQuery = trimmedQuery
+                    )
                 }
 
-                // Search both cases and sessions
-                val searchedCases = repository.searchCases(query).first()
-                val searchedSessions = repository.searchSessions(query).first()
                 val allCases = repository.getAllCases().first()
+                val allSessions = repository.getAllSessions().first()
 
-                val sessionsWithCases = mutableListOf<SessionWithCase>()
+                val searchedCases = repository.searchCases(trimmedQuery).first()
+                val searchedSessions = repository.searchSessions(trimmedQuery).first()
 
-                // Add sessions from case search
-                searchedCases.forEach { case ->
-                    repository.getSessionsByCaseId(case.caseId).first().forEach { session ->
-                        sessionsWithCases.add(SessionWithCase(session, case))
+                val searchedCaseIds = searchedCases.map { it.caseId }.toSet()
+                val searchedSessionIds = searchedSessions.map { it.sessionId }.toSet()
+                val casesById = allCases.associateBy { it.caseId }
+
+                val results = allSessions
+                    .filter { session ->
+                        session.caseId in searchedCaseIds || session.sessionId in searchedSessionIds
                     }
-                }
-
-                // Add sessions from session search
-                searchedSessions.forEach { session ->
-                    val case = allCases.find { it.caseId == session.caseId }
-                    case?.let { it ->
-                        val sessionWithCase = SessionWithCase(session, it)
-                        if (!sessionsWithCases.any { it -> it.session.sessionId == session.sessionId }) {
-                            sessionsWithCases.add(sessionWithCase)
-                        }
+                    .mapNotNull { session ->
+                        casesById[session.caseId]?.let { case -> SessionWithCase(session, case) }
                     }
-                }
+                    .sortedByDescending { it.session.sessionDate }
 
-                _uiState.value = _uiState.value.copy(
-                    sessions = sessionsWithCases.sortedByDescending { it.session.sessionDate },
-                    isLoading = false
-                )
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "فشل في البحث"
-                )
+                _uiState.update {
+                    it.copy(
+                        sessions = results,
+                        isLoading = false,
+                        error = null
+                    )
+                }
+            } catch (exception: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = exception.message ?: "Search failed"
+                    )
+                }
             }
         }
     }
 
     fun clearSearch() {
-        _uiState.value = _uiState.value.copy(
-            searchQuery = "",
-            isSearchMode = false
-        )
+        currentSearchQuery = ""
+        currentViewMode = SessionViewMode.DATE
+
+        _uiState.update {
+            it.copy(
+                searchQuery = "",
+                isSearchMode = false
+            )
+        }
+
         loadSessionsForDate(_uiState.value.selectedDate)
     }
 
-    // ---------------------------
-    // 💾 CRUD Operations
-    // ---------------------------
+    // --------------------------- CRUD Operations ---------------------------
     fun saveSession(
         case: CaseEntity,
         session: SessionEntity,
@@ -190,25 +273,24 @@ class AgendaViewModel(
     ) {
         viewModelScope.launch {
             try {
-                _uiState.value = _uiState.value.copy(isLoading = true)
+                _uiState.update { it.copy(isLoading = true, error = null) }
 
-                // Use the new repository method
-                repository.saveCaseWithSession(case, session, createNextSession, nextSessionDate)
-
-                // Refresh current view
-                if (_uiState.value.isSearchMode) {
-                    searchSessions(_uiState.value.searchQuery)
-                } else {
-                    loadSessionsForDate(_uiState.value.selectedDate)
-                }
-
-                loadStatistics()
-                _uiState.value = _uiState.value.copy(isLoading = false)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "فشل في حفظ الجلسة"
+                repository.saveCaseWithSession(
+                    case = case,
+                    session = session,
+                    createNextSession = createNextSession,
+                    nextSessionDate = nextSessionDate
                 )
+
+                refreshCurrentView()
+                _uiState.update { it.copy(isLoading = false) }
+            } catch (exception: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = exception.message ?: "Failed to save session"
+                    )
+                }
             }
         }
     }
@@ -217,25 +299,18 @@ class AgendaViewModel(
         viewModelScope.launch {
             try {
                 val session = repository.getSessionById(sessionId)
-                if (session != null) {
-                    val updatedSession = session.copy(
-                        status = newStatus,
-                        notes = notes
-                    )
-                    repository.updateSession(updatedSession)
-
-                    // Refresh current view
-                    if (_uiState.value.isSearchMode) {
-                        searchSessions(_uiState.value.searchQuery)
-                    } else {
-                        loadSessionsForDate(_uiState.value.selectedDate)
-                    }
-                    loadStatistics()
+                if (session == null) {
+                    _uiState.update { it.copy(error = "Session not found") }
+                    return@launch
                 }
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    error = e.message ?: "فشل في تحديث حالة الجلسة"
-                )
+
+                val updatedSession = session.copy(status = newStatus, notes = notes)
+                repository.updateSession(updatedSession)
+                refreshCurrentView()
+            } catch (exception: Exception) {
+                _uiState.update {
+                    it.copy(error = exception.message ?: "Failed to update session status")
+                }
             }
         }
     }
@@ -244,18 +319,11 @@ class AgendaViewModel(
         viewModelScope.launch {
             try {
                 repository.deleteSession(session)
-
-                // Refresh current view
-                if (_uiState.value.isSearchMode) {
-                    searchSessions(_uiState.value.searchQuery)
-                } else {
-                    loadSessionsForDate(_uiState.value.selectedDate)
+                refreshCurrentView()
+            } catch (exception: Exception) {
+                _uiState.update {
+                    it.copy(error = exception.message ?: "Failed to delete session")
                 }
-                loadStatistics()
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    error = e.message ?: "فشل في حذف الجلسة"
-                )
             }
         }
     }
@@ -263,10 +331,8 @@ class AgendaViewModel(
     suspend fun getCaseById(caseId: Long): CaseEntity? {
         return try {
             repository.getCaseById(caseId)
-        } catch (e: Exception) {
-            _uiState.value = _uiState.value.copy(
-                error = e.message ?: "فشل في جلب بيانات القضية"
-            )
+        } catch (exception: Exception) {
+            _uiState.update { it.copy(error = exception.message ?: "Failed to load case") }
             null
         }
     }
@@ -274,10 +340,8 @@ class AgendaViewModel(
     suspend fun getSessionById(sessionId: Long): SessionEntity? {
         return try {
             repository.getSessionById(sessionId)
-        } catch (e: Exception) {
-            _uiState.value = _uiState.value.copy(
-                error = e.message ?: "فشل في جلب بيانات الجلسة"
-            )
+        } catch (exception: Exception) {
+            _uiState.update { it.copy(error = exception.message ?: "Failed to load session") }
             null
         }
     }
@@ -286,18 +350,9 @@ class AgendaViewModel(
         viewModelScope.launch {
             try {
                 repository.deleteCaseWithSessions(caseId)
-
-                // Refresh current view
-                if (_uiState.value.isSearchMode) {
-                    searchSessions(_uiState.value.searchQuery)
-                } else {
-                    loadSessionsForDate(_uiState.value.selectedDate)
-                }
-                loadStatistics()
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    error = e.message ?: "فشل في حذف القضية"
-                )
+                refreshCurrentView()
+            } catch (exception: Exception) {
+                _uiState.update { it.copy(error = exception.message ?: "Failed to delete case") }
             }
         }
     }
@@ -305,89 +360,43 @@ class AgendaViewModel(
     fun saveCase(case: CaseEntity) {
         viewModelScope.launch {
             try {
-                _uiState.value = _uiState.value.copy(isLoading = true)
+                _uiState.update { it.copy(isLoading = true, error = null) }
 
-                // Validate case before saving
                 if (!case.isValid()) {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = "بيانات القضية غير صالحة"
-                    )
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = "Case data is invalid"
+                        )
+                    }
                     return@launch
                 }
 
-                // Check for duplicate case number
                 if (repository.isCaseNumberExists(case.caseNumber, case.caseId)) {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = "رقم القضية موجود بالفعل"
-                    )
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = "Case number already exists"
+                        )
+                    }
                     return@launch
                 }
 
-                // Save the case
                 if (case.caseId == 0L) {
                     repository.insertCase(case)
                 } else {
                     repository.updateCase(case)
                 }
 
-                // Refresh current view
-                if (_uiState.value.isSearchMode) {
-                    searchSessions(_uiState.value.searchQuery)
-                } else {
-                    loadSessionsForDate(_uiState.value.selectedDate)
-                }
-                loadStatistics()
-                _uiState.value = _uiState.value.copy(isLoading = false)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "فشل في حفظ القضية"
-                )
-            }
-        }
-    }
-
-    fun updateCase(case: CaseEntity) {
-        viewModelScope.launch {
-            try {
-                _uiState.value = _uiState.value.copy(isLoading = true)
-
-                // Validate case before updating
-                if (!case.isValid()) {
-                    _uiState.value = _uiState.value.copy(
+                refreshCurrentView()
+                _uiState.update { it.copy(isLoading = false) }
+            } catch (exception: Exception) {
+                _uiState.update {
+                    it.copy(
                         isLoading = false,
-                        error = "بيانات القضية غير صالحة"
+                        error = exception.message ?: "Failed to save case"
                     )
-                    return@launch
                 }
-
-                // Check for duplicate case number (excluding current case)
-                if (repository.isCaseNumberExists(case.caseNumber, case.caseId)) {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = "رقم القضية موجود بالفعل"
-                    )
-                    return@launch
-                }
-
-                // Update the case
-                repository.updateCase(case)
-
-                // Refresh current view
-                if (_uiState.value.isSearchMode) {
-                    searchSessions(_uiState.value.searchQuery)
-                } else {
-                    loadSessionsForDate(_uiState.value.selectedDate)
-                }
-                loadStatistics()
-                _uiState.value = _uiState.value.copy(isLoading = false)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "فشل في تحديث القضية"
-                )
             }
         }
     }
@@ -396,43 +405,27 @@ class AgendaViewModel(
         viewModelScope.launch {
             try {
                 val case = repository.getCaseById(caseId)
-                if (case != null) {
-                    val updatedCase = case.copy(isActive = !case.isActive)
-                    repository.updateCase(updatedCase)
-
-                    // Refresh current view
-                    if (_uiState.value.isSearchMode) {
-                        searchSessions(_uiState.value.searchQuery)
-                    } else {
-                        loadSessionsForDate(_uiState.value.selectedDate)
-                    }
-                    loadStatistics()
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        error = "القضية غير موجودة"
-                    )
+                if (case == null) {
+                    _uiState.update { it.copy(error = "Case not found") }
+                    return@launch
                 }
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    error = e.message ?: "فشل في تغيير حالة القضية"
-                )
+
+                repository.updateCase(case.copy(isActive = !case.isActive))
+                refreshCurrentView()
+            } catch (exception: Exception) {
+                _uiState.update { it.copy(error = exception.message ?: "Failed to change case status") }
             }
         }
     }
 
-    // ---------------------------
-    // 📊 Statistics
-    // ---------------------------
+    // --------------------------- Statistics ---------------------------
     private fun loadStatistics() {
         viewModelScope.launch {
             try {
                 val stats = repository.getOverallStatistics()
-                _uiState.value = _uiState.value.copy(statistics = stats)
+                _uiState.update { it.copy(statistics = stats) }
             } catch (_: Exception) {
-                // Statistics failure shouldn't break the app, just log it
-                _uiState.value = _uiState.value.copy(
-                    statistics = OverallStatistics(0, 0, 0, 0, 0)
-                )
+                _uiState.update { it.copy(statistics = OverallStatistics(0, 0, 0, 0, 0)) }
             }
         }
     }
@@ -441,46 +434,64 @@ class AgendaViewModel(
         loadStatistics()
     }
 
-    // ---------------------------
-    // ☁️ Backup and Restore
-    // ---------------------------
+    // --------------------------- Backup and Restore ---------------------------
+    fun initializeGoogleDriveAccount(accountName: String): Boolean {
+        val initialized = backupManager.initializeWithAccount(accountName)
+
+        _uiState.update {
+            it.copy(
+                isLoggedIn = initialized,
+                error = if (initialized) null else "Failed to initialize Google account"
+            )
+        }
+
+        return initialized
+    }
+
     fun backupToDrive() {
         viewModelScope.launch {
             try {
-                _uiState.value = _uiState.value.copy(isLoading = true)
+                _uiState.update { it.copy(isLoading = true, isLoggedIn = backupManager.isSignedIn()) }
 
-                // Check if user is signed in
                 if (!backupManager.isSignedIn()) {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = "يجب تسجيل الدخول أولاً لإنشاء نسخة احتياطية"
-                    )
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = "Please sign in before creating a backup"
+                        )
+                    }
                     return@launch
                 }
 
-                // Use the new export functionality
                 val exportData = repository.exportData()
                 val result = backupManager.backupToDrive(exportData.cases, exportData.sessions)
 
                 result.fold(
                     onSuccess = { message ->
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            backupStatus = message
-                        )
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                isLoggedIn = true,
+                                backupStatus = message
+                            )
+                        }
                     },
                     onFailure = { error ->
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            error = error.message ?: "فشل في إنشاء النسخة الاحتياطية"
-                        )
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                error = error.message ?: "Backup failed"
+                            )
+                        }
                     }
                 )
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "فشل في إنشاء النسخة الاحتياطية"
-                )
+            } catch (exception: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = exception.message ?: "Backup failed"
+                    )
+                }
             }
         }
     }
@@ -488,21 +499,21 @@ class AgendaViewModel(
     fun restoreFromDrive() {
         viewModelScope.launch {
             try {
-                _uiState.value = _uiState.value.copy(isLoading = true)
+                _uiState.update { it.copy(isLoading = true, isLoggedIn = backupManager.isSignedIn()) }
 
-                // Check if user is signed in
                 if (!backupManager.isSignedIn()) {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = "يجب تسجيل الدخول أولاً لاستعادة النسخة الاحتياطية"
-                    )
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = "Please sign in before restoring backup"
+                        )
+                    }
                     return@launch
                 }
 
                 val result = backupManager.restoreFromDrive()
                 result.fold(
                     onSuccess = { backupData ->
-                        // Use the new import functionality
                         val exportData = DatabaseExport(
                             cases = backupData.cases,
                             sessions = backupData.sessions,
@@ -512,190 +523,142 @@ class AgendaViewModel(
                         val importResult = repository.importData(exportData)
 
                         if (importResult.success) {
-                            _uiState.value = _uiState.value.copy(
-                                isLoading = false,
-                                backupStatus = "تم استعادة البيانات بنجاح - ${importResult.importedCases} قضية، ${importResult.importedSessions} جلسة"
-                            )
-
-                            // Refresh all views
-                            loadSessionsForDate(_uiState.value.selectedDate)
-                            loadStatistics()
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    isLoggedIn = true,
+                                    backupStatus = "Restore complete: ${importResult.importedCases} cases, ${importResult.importedSessions} sessions"
+                                )
+                            }
+                            refreshAllViews()
                         } else {
-                            _uiState.value = _uiState.value.copy(
-                                isLoading = false,
-                                error = importResult.error ?: "فشل في استيراد البيانات"
-                            )
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    error = importResult.error ?: "Restore failed"
+                                )
+                            }
                         }
                     },
                     onFailure = { error ->
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            error = error.message ?: "فشل في استعادة البيانات"
-                        )
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                error = error.message ?: "Restore failed"
+                            )
+                        }
                     }
                 )
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "فشل في استعادة البيانات"
-                )
+            } catch (exception: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = exception.message ?: "Restore failed"
+                    )
+                }
             }
         }
     }
 
-    fun exportLocalBackup(): DatabaseExport? {
-        return try {
-            viewModelScope.launch {
-                repository.exportData()
-            }
-            null // This should be handled differently, returning from coroutine
-        } catch (e: Exception) {
-            _uiState.value = _uiState.value.copy(
-                error = e.message ?: "فشل في تصدير البيانات"
-            )
-            null
-        }
+    suspend fun exportLocalBackup(): DatabaseExport {
+        return repository.exportData()
     }
 
-    // ---------------------------
-    // 🧹 State Management
-    // ---------------------------
+    // --------------------------- State Management ---------------------------
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        _uiState.update { it.copy(error = null) }
     }
 
     fun clearBackupStatus() {
-        _uiState.value = _uiState.value.copy(backupStatus = null)
+        _uiState.update { it.copy(backupStatus = null) }
     }
-    
-    // Google Account methods
-    fun isSignedInToGoogle(): Boolean {
-        return backupManager.isSignedIn()
-    }
-    
+
+    fun isSignedInToGoogle(): Boolean = backupManager.isSignedIn()
+
     fun signOutFromGoogle() {
         viewModelScope.launch {
             try {
                 backupManager.signOut()
-                _uiState.value = _uiState.value.copy(
-                    backupStatus = "تم تسجيل الخروج بنجاح"
-                )
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    error = e.message ?: "فشل في تسجيل الخروج"
-                )
-            }
-        }
-    }
-
-    fun setLoading(isLoading: Boolean) {
-        _uiState.value = _uiState.value.copy(isLoading = isLoading)
-    }
-
-    // ---------------------------
-    // 🎯 Quick Actions
-    // ---------------------------
-    fun getTodaySessions() {
-        selectDate(System.currentTimeMillis())
-    }
-
-    fun getUpcomingSessions() {
-        viewModelScope.launch {
-            try {
-                _uiState.value = _uiState.value.copy(isLoading = true, isSearchMode = true)
-
-                val upcomingSessions = repository.getUpcomingSessions().first()
-                val allCases = repository.getAllCases().first()
-
-                val sessionsWithCases = upcomingSessions.mapNotNull { session ->
-                    val case = allCases.find { it.caseId == session.caseId }
-                    case?.let { SessionWithCase(session, it) }
+                _uiState.update {
+                    it.copy(
+                        isLoggedIn = false,
+                        backupStatus = "Signed out successfully"
+                    )
                 }
-
-                _uiState.value = _uiState.value.copy(
-                    sessions = sessionsWithCases,
-                    isLoading = false,
-                    searchQuery = "الجلسات القادمة"
-                )
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "فشل في جلب الجلسات القادمة"
-                )
+            } catch (exception: Exception) {
+                _uiState.update { it.copy(error = exception.message ?: "Sign-out failed") }
             }
         }
+    }
+
+    // --------------------------- Quick Actions ---------------------------
+    fun getUpcomingSessions() {
+        currentViewMode = SessionViewMode.UPCOMING
+
+        collectSessions(
+            sessionsSource = repository.getUpcomingSessions(),
+            isSearchMode = true,
+            searchQuery = "Upcoming sessions",
+            comparator = compareBy { it.session.sessionDate }
+        )
     }
 
     fun getSessionsForWeek(weekStart: Long) {
-        viewModelScope.launch {
-            try {
-                _uiState.value = _uiState.value.copy(isLoading = true)
+        currentViewMode = SessionViewMode.WEEK
+        currentWeekStart = weekStart
 
-                repository.getSessionsForWeek(weekStart)
-                    .combine(repository.getAllCases()) { sessions, cases ->
-                        sessions.mapNotNull { session ->
-                            val case = cases.find { it.caseId == session.caseId }
-                            case?.let { SessionWithCase(session, it) }
-                        }.sortedBy { it.session.sessionDate }
-                    }
-                    .collect { sessionsWithCases ->
-                        _uiState.value = _uiState.value.copy(
-                            sessions = sessionsWithCases,
-                            isLoading = false,
-                            isSearchMode = true,
-                            searchQuery = "جلسات الأسبوع"
-                        )
-                    }
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "فشل في جلب جلسات الأسبوع"
-                )
-            }
-        }
+        collectSessions(
+            sessionsSource = repository.getSessionsForWeek(weekStart),
+            isSearchMode = true,
+            searchQuery = "Week sessions",
+            comparator = compareBy { it.session.sessionDate }
+        )
     }
 
-    // ---------------------------
-    // 🔧 Validation Helpers
-    // ---------------------------
+    fun getSessionsForMonth(monthStart: Long) {
+        currentViewMode = SessionViewMode.MONTH
+        currentMonthStart = monthStart
+
+        collectSessions(
+            sessionsSource = repository.getSessionsForMonth(monthStart),
+            isSearchMode = true,
+            searchQuery = "Month sessions",
+            comparator = compareBy { it.session.sessionDate }
+        )
+    }
+
+    // --------------------------- Validation Helpers ---------------------------
     suspend fun validateSession(session: SessionEntity): String? {
         return try {
             if (!session.isValid()) {
-                return "بيانات الجلسة غير صالحة"
+                return "Session data is invalid"
             }
 
             if (repository.isSessionExists(session.caseId, session.sessionDate, session.sessionId)) {
-                return "توجد جلسة أخرى لنفس القضية في هذا التاريخ"
+                return "A session already exists for this case and date"
             }
 
-            null // Valid
-        } catch (e: Exception) {
-            e.message ?: "خطأ في التحقق من صحة البيانات"
+            null
+        } catch (exception: Exception) {
+            exception.message ?: "Validation failed"
         }
     }
 
-    // ---------------------------
-    // 📊 Sample Data Management
-    // ---------------------------
+    // --------------------------- Sample Data Management ---------------------------
     fun populateSampleData() {
         viewModelScope.launch {
             try {
-                _uiState.value = _uiState.value.copy(isLoading = true)
+                _uiState.update { it.copy(isLoading = true) }
                 repository.populateSampleData()
-                
-                // Refresh current view
-                if (_uiState.value.isSearchMode) {
-                    searchSessions(_uiState.value.searchQuery)
-                } else {
-                    loadSessionsForDate(_uiState.value.selectedDate)
+                refreshCurrentView()
+                _uiState.update { it.copy(isLoading = false) }
+            } catch (exception: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = exception.message ?: "Failed to populate sample data"
+                    )
                 }
-                loadStatistics()
-                _uiState.value = _uiState.value.copy(isLoading = false)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "فشل في تحميل البيانات التجريبية"
-                )
             }
         }
     }
@@ -703,20 +666,40 @@ class AgendaViewModel(
     fun clearAllData() {
         viewModelScope.launch {
             try {
-                _uiState.value = _uiState.value.copy(isLoading = true)
+                _uiState.update { it.copy(isLoading = true) }
                 repository.clearAllData()
-                
-                // Refresh current view
-                loadSessionsForDate(_uiState.value.selectedDate)
-                loadStatistics()
-                _uiState.value = _uiState.value.copy(isLoading = false)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "فشل في مسح البيانات"
-                )
+                refreshAllViews()
+                _uiState.update { it.copy(isLoading = false) }
+            } catch (exception: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = exception.message ?: "Failed to clear data"
+                    )
+                }
             }
         }
     }
 
+    // --------------------------- Helper Methods ---------------------------
+    private fun refreshCurrentView() {
+        when (currentViewMode) {
+            SessionViewMode.DATE -> loadSessionsForDate(_uiState.value.selectedDate)
+            SessionViewMode.SEARCH -> searchSessions(currentSearchQuery)
+            SessionViewMode.UPCOMING -> getUpcomingSessions()
+            SessionViewMode.WEEK -> getSessionsForWeek(currentWeekStart)
+            SessionViewMode.MONTH -> getSessionsForMonth(currentMonthStart)
+        }
+
+        loadStatistics()
+    }
+
+    private fun refreshAllViews() {
+        refreshCurrentView()
+    }
+
+    override fun onCleared() {
+        cancelSessionsCollector()
+        super.onCleared()
+    }
 }

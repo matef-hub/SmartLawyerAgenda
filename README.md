@@ -1,4 +1,21 @@
-# SmartLawyerAgenda - أجندة المحامي الذكية
+<div align="center"><img src="https://raw.githubusercontent.com/matef-hub/atefdodo/main/assets/research-signal.svg" width="100%" alt="Research · verified data · applied AI" /></div>
+
+# SmartLawyerAgenda | أجندة المحامي الذكية
+
+**Kotlin · Jetpack Compose · Room · Arabic RTL**
+
+> النسخ الاحتياطي إلى Google Drive موصوف في المشروع، لكن يجب التحقق من الاستعادة فعليًا على جهاز مستقل قبل الاعتماد عليه.
+
+```mermaid
+flowchart LR
+   A["بيانات الدعوى"] --> B["الجلسات"]
+   B --> C["Room المحلي"]
+   C --> D["نسخ احتياطي"]
+   D --> E["اختبار الاستعادة"]
+```
+
+## التوثيق الفني
+
 
 تطبيق أندرويد لإدارة أجندة المحاكم اليومية للمحامين مع دعم النسخ الاحتياطية على Google Drive.
 
